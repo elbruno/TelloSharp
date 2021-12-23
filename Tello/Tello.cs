@@ -1209,7 +1209,7 @@ namespace TelloSharp
             {
                 StringBuilder sb = new();
                 int count = 0;
-                foreach (System.Reflection.FieldInfo property in GetType().GetFields())
+                foreach (System.Reflection.PropertyInfo property in GetType().GetProperties())
                 {
                     sb.Append(property.Name);
                     sb.Append(": ");
