@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp", "Tello\TelloSharp.csproj", "{E0C23B21-C8EE-402A-8297-E21217B3567F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1D1DDB9C-17F7-4FE7-A74D-7811643BA9C2}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		Tello.cs = Tello.cs
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.Example", "TelloSharp.Example\TelloSharp.Example.csproj", "{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.WinformsExample", "TelloSharp.WinformsExample\TelloSharp.WinformsExample.csproj", "{801FF204-9BA4-4633-A320-090F726F5315}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E0C23B21-C8EE-402A-8297-E21217B3567F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0C23B21-C8EE-402A-8297-E21217B3567F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0C23B21-C8EE-402A-8297-E21217B3567F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0C23B21-C8EE-402A-8297-E21217B3567F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{801FF204-9BA4-4633-A320-090F726F5315}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{801FF204-9BA4-4633-A320-090F726F5315}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{801FF204-9BA4-4633-A320-090F726F5315}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{801FF204-9BA4-4633-A320-090F726F5315}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DCF4AFA3-0BCE-4939-907C-6AA845A67E56}
+	EndGlobalSection
+EndGlobal
