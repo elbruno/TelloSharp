@@ -4,7 +4,7 @@ namespace TelloSharp.Example
 {
     public static class Program
     {
-        static bool Connected = false;
+        private static bool Connected;
         static string logPath = "logs/";
         static string logFilePath = string.Empty;
         static DateTime logStartTime = DateTime.Now;
@@ -21,11 +21,11 @@ namespace TelloSharp.Example
             tello = new();
             tello.OnConnection += Tello_OnConnection;
             tello.OnUpdate += Tello_OnUpdate;
-            tello.StartConnecting();
+            tello.Connect();
 
             while (!tello.CancelTokens.Token.IsCancellationRequested)
             {
-                string? line = Console.ReadLine();
+                var line = Console.ReadLine();
                 if (line != null)
                 {
                     if (line.Contains("exit")) break;
@@ -36,29 +36,30 @@ namespace TelloSharp.Example
             }
         }
 
-        private static void Tello_OnUpdate(int cmdId)
+        private static void Tello_OnConnection(object? sender, Tello.ConnectionState e)
         {
-            if (cmdId == 86) 
-            {
-                //write update to log.
-                var elapsed = DateTime.Now - logStartTime;
-                File.AppendAllText(logFilePath, elapsed.ToString(@"mm\:ss\:ff\,") + tello.State.GetLogLine());
-
-                //display state in console.
-                var outStr = tello.State.ToString();//ToString() = Formated state
-                PrintAt(0, 2, outStr);
-            }
-        }
-
-        private static void Tello_OnConnection(Tello.ConnectionState newState)
-        {
-            if(newState == Tello.ConnectionState.Connected) 
-                Connected=true;
-            if (newState == Tello.ConnectionState.Disconnected)
+            if (e == Tello.ConnectionState.Connected)
+                Connected = true;
+            if (e == Tello.ConnectionState.Disconnected)
                 Connected = false;
         }
 
-        static void PrintAt(int x, int y, string str)
+        private static void Tello_OnUpdate(object? sender, TelloStateEventArgs e)
+        {
+            if (e.LastCmdId == 86)
+            {
+                //write update to log.
+                var elapsed = DateTime.Now - logStartTime;
+                File.AppendAllText(logFilePath, elapsed.ToString(@"mm\:ss\:ff\,") + tello?.State.GetLogLine());
+
+                //display state in console.
+                var outStr = tello?.State.ToString();
+                PrintAt(0, 2, outStr);
+            }
+        }
+ 
+
+        static void PrintAt(int x, int y, string? str)
         {
             var saveLeft = Console.CursorLeft;
             var saveTop = Console.CursorTop;

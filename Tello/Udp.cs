@@ -22,7 +22,7 @@ namespace TelloSharp
 
         public async Task<Received> Receive()
         {
-            var result = await Client.ReceiveAsync();
+            UdpReceiveResult result = await Client.ReceiveAsync();
             return new Received()
             {
                 bytes = result.Buffer.ToArray(),
@@ -30,13 +30,12 @@ namespace TelloSharp
                 Sender = result.RemoteEndPoint
             };
         }
-
     }
 
     //Server
     public class UdpListener : UdpBase
     {
-        private IPEndPoint _listenOn;
+        private readonly IPEndPoint _listenOn;
 
         public UdpListener(int port) : this(new IPEndPoint(IPAddress.Any, port))
         {
@@ -50,7 +49,7 @@ namespace TelloSharp
 
         public void Reply(string message, IPEndPoint endpoint)
         {
-            var datagram = Encoding.ASCII.GetBytes(message);
+            byte[]? datagram = Encoding.ASCII.GetBytes(message);
             Client.Send(datagram, datagram.Length, endpoint);
         }
 
@@ -59,18 +58,18 @@ namespace TelloSharp
     //Client
     public class UdpUser : UdpBase
     {
-        private UdpUser() { }
+        public UdpUser() { }
 
         public static UdpUser ConnectTo(string hostname, int port)
         {
-            var connection = new UdpUser();
+            UdpUser? connection = new();
             connection.Client.Connect(hostname, port);
             return connection;
         }
 
         public void Send(string message)
         {
-            var datagram = Encoding.ASCII.GetBytes(message);
+            byte[]? datagram = Encoding.ASCII.GetBytes(message);
             Client.Send(datagram, datagram.Length);
         }
         public void Send(byte[] message)
