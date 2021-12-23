@@ -8,7 +8,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1D1DDB9C-17F7-4FE7-A74D-7811643BA9C2}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
-		Tello.cs = Tello.cs
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.Example", "TelloSharp.Example\TelloSharp.Example.csproj", "{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}"
