@@ -52,11 +52,39 @@ namespace TelloSharp
             _client = new UdpUser();
         }
 
-
         public void TakeOff()
         {            
             var  pkt = _messages.NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
             _client.Send(pkt);
+        }
+
+        public void StopSmartVideo(SmartVideoCmd cmd)
+        {
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
+            pkt.payload[0] = (byte)cmd;
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+        }
+
+        public void Hover()
+        {
+            ctrlRx = 0;
+            ctrlRy = 0;
+            ctrlLx = 0;
+            ctrlLy = 0;
+            SendStickUpdate();
+        }
+
+        /// <summary>
+        /// StartSmartVideo
+        /// </summary>
+        /// <param name="cmd"></param>
+        public void StartSmartVideo(SmartVideoCmd cmd)
+        {            
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
+            pkt.payload[0] = (byte)((byte)cmd | 0x01);
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
         }
 
         public void ThrowTakeOff()
@@ -106,6 +134,96 @@ namespace TelloSharp
 
             var buffer = _messages.PacketToBuffer(pkt);
             _client.Send(buffer);
+        }
+
+        private void SendStickUpdate()
+        {
+            var pkt = new Packet();
+
+            // populate the command packet fields we need
+            pkt.header = msgHdr;
+            pkt.toDrone = true;
+            pkt.packetType = PacketType.ptData2;
+            pkt.messageID = MessageTypes.msgSetStick;
+            pkt.sequence = 0;
+            pkt.payload = new byte[11];
+
+            // This packing of the joystick data is just vile...
+            int packedAxes = jsInt16ToTello(ctrlRx) & 0x07ff;
+            packedAxes |= (jsInt16ToTello(ctrlRy) & 0x07ff) << 11;
+            packedAxes |= (jsInt16ToTello(ctrlLy) & 0x07ff) << 22;
+            packedAxes |= (jsInt16ToTello(ctrlLx) & 0x07ff) << 33;
+
+            if (ctrlSportsMode)
+            {
+                packedAxes |= 1 << 44;
+            }
+
+            pkt.payload[0] = (byte)packedAxes;
+            pkt.payload[1] = (byte)(packedAxes >> 8);
+            pkt.payload[2] = (byte)(packedAxes >> 16);
+            pkt.payload[3] = (byte)(packedAxes >> 24);
+            pkt.payload[4] = (byte)(packedAxes >> 32);
+            pkt.payload[5] = (byte)(packedAxes >> 40);
+
+            var now = DateTime.Now;
+            pkt.payload[6] = (byte)now.Hour;
+            pkt.payload[7] = (byte)now.Minute;
+            pkt.payload[8] = (byte)now.Second;
+
+            var ms = DateTimeOffset.Now.ToUnixTimeSeconds() / 1000000;
+            pkt.payload[9] = (byte)(ms & 0xff);
+            pkt.payload[10] = (byte)(ms >> 8);
+
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+        }
+
+        private int jsInt16ToTello(short sv)
+        {
+            // sv is in range -32768 to 32767, we need 660 to 1388 where 0 => 1024
+            //return uint64((sv / 90) + 1024)
+            // Changed this as new info (Oct 18) suggests range should be 364 to 1684...
+            return (int)(sv / 49.672 + 1024);
+        }
+
+        private void SendDateTime()
+        {
+            var pkt = new Packet();
+
+            // populate the command packet fields we need
+            pkt.header = msgHdr;
+            pkt.toDrone = true;
+            pkt.packetType = PacketType.ptData1;
+            pkt.messageID = MessageTypes.msgSetDateTime;
+            pkt.payload = new byte[11];
+
+            _controlSequence++;
+            pkt.sequence = _controlSequence;
+
+            pkt.payload = new byte[15];
+            pkt.payload[0] = 0;
+
+            var now = DateTime.Now;
+            pkt.payload[1] = (byte)now.Year;
+            pkt.payload[2] = (byte)((byte)now.Year >> 8);
+            pkt.payload[3] = (byte)now.Month;
+            pkt.payload[4] = (byte)((byte)now.Month >> 8);
+            pkt.payload[5] = (byte)now.Day;
+            pkt.payload[6] = (byte)((byte)now.Day >> 8);
+            pkt.payload[7] = (byte)now.Hour;
+            pkt.payload[8] = (byte)((byte)now.Hour >> 8);
+            pkt.payload[9] = (byte)now.Minute;
+            pkt.payload[10] = (byte)((byte)now.Minute >> 8);
+            pkt.payload[11] = (byte)now.Second;
+            pkt.payload[12] = (byte)((byte)now.Second >> 8);
+
+            var ms = DateTimeOffset.Now.ToUnixTimeSeconds() / 1000000;
+            pkt.payload[13] = (byte)ms;
+            pkt.payload[14] = (byte)((byte)ms >> 8);
+
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer); 
         }
 
 
@@ -813,6 +931,11 @@ namespace TelloSharp
         public ControllerState _controllerState = new ControllerState();
         public ControllerState _autoPilotControllerState = new ControllerState();
         private bool ctrlBouncing;
+        private bool ctrlSportsMode;
+        private short ctrlRx;
+        private short ctrlRy;
+        private short ctrlLy;
+        private short ctrlLx;
 
         public float Clamp(float value, float min, float max)
         {

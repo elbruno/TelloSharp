@@ -105,10 +105,13 @@
         // SvCmd is Smart Video flight command.
         private readonly byte SvCmd;
 
-        // Smart Video flight commands...
-        private const byte Sv360 = 1 << 2; // Slowly rotate around 360 degrees.
-        private const byte SvCircle = 2 << 2; // Circle around a point in front of the drone.
-        private const byte SvUpOut = 3 << 2; // Perform the 'Up and Out' manouvre.
+        // Smart Video flight
+        public enum SmartVideoCmd
+        {
+            Sv360 = 1 << 2,     // Slowly rotate around 360 degrees.
+            SvCircle = 2 << 2,  // Circle around a point in front of the drone.
+            SvUpOut = 3 << 2    // Perform the 'Up and Out' manouvre.
+        }
 
 
         // VBR is a Video Bit Rate, the int value is meaningless.

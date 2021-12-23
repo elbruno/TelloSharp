@@ -38,6 +38,7 @@
             this.btnFlip = new System.Windows.Forms.Button();
             this.btnStartSmartVideo = new System.Windows.Forms.Button();
             this.btnStopSmartVideo = new System.Windows.Forms.Button();
+            this.btnHover = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnConnect
@@ -128,6 +129,7 @@
             this.btnStartSmartVideo.TabIndex = 8;
             this.btnStartSmartVideo.Text = "Start SmartVid";
             this.btnStartSmartVideo.UseVisualStyleBackColor = true;
+            this.btnStartSmartVideo.Click += new System.EventHandler(this.btnStartSmartVideo_Click);
             // 
             // btnStopSmartVideo
             // 
@@ -137,12 +139,24 @@
             this.btnStopSmartVideo.TabIndex = 9;
             this.btnStopSmartVideo.Text = "Stop SmartVid";
             this.btnStopSmartVideo.UseVisualStyleBackColor = true;
+            this.btnStopSmartVideo.Click += new System.EventHandler(this.btnStopSmartVideo_Click);
+            // 
+            // btnHover
+            // 
+            this.btnHover.Location = new System.Drawing.Point(175, 210);
+            this.btnHover.Name = "btnHover";
+            this.btnHover.Size = new System.Drawing.Size(75, 23);
+            this.btnHover.TabIndex = 10;
+            this.btnHover.Text = "Hover";
+            this.btnHover.UseVisualStyleBackColor = true;
+            this.btnHover.Click += new System.EventHandler(this.btnHover_Click);
             // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.btnHover);
             this.Controls.Add(this.btnStopSmartVideo);
             this.Controls.Add(this.btnStartSmartVideo);
             this.Controls.Add(this.btnFlip);
@@ -172,5 +186,6 @@
         private Button btnFlip;
         private Button btnStartSmartVideo;
         private Button btnStopSmartVideo;
+        private Button btnHover;
     }
 }
