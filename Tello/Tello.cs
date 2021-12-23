@@ -1,24 +1,25 @@
 ﻿using System.Text;
+using static TelloSharp.Messages;
 
 namespace TelloSharp
 {
     public class Tello
     {
         private UdpUser _client;
+        private FlyData _state;
+        private Messages _messages;
+
         private DateTime lastMessageTime;//for connection timeouts.
         private readonly UdpListener videoServer = new UdpListener(6040);
 
-        public FlyData _state;
+
         private short _wifiStrength = 0;
+        private short _controlSequence = 1;
         public bool _connected = false;
 
-        public delegate void updateDeligate(int cmdId);
-        public event updateDeligate OnUpdate;
-        public delegate void connectionDeligate(ConnectionState newState);
-        public event connectionDeligate OnConnection;
-        public delegate void videoUpdateDeligate(byte[] data);
-        public event videoUpdateDeligate onVideoData;
-
+        public event EventHandler<TelloStateEventArgs> OnUpdate;
+        public event EventHandler<ConnectionState> OnConnection;
+        
         public string picPath;      //todo redo this. 
         public string picFilePath;  //todo redo this. 
         public int picMode = 0;     //pic or vid aspect ratio.
@@ -36,37 +37,77 @@ namespace TelloSharp
             UnPausing
         }
 
+
+
         public ConnectionState _connectionState = ConnectionState.Disconnected;
         private CancellationTokenSource _cancelTokens = new CancellationTokenSource();
         public CancellationTokenSource CancelTokens { get => _cancelTokens; set => _cancelTokens = value; }
-        public FlyData State { get => _state; }
+         
+        public FlyData State => _state;
+
+        public Tello()
+        {
+            _state = new FlyData(this);
+            _messages = new Messages();
+            _client = new UdpUser();
+        }
+
 
         public void TakeOff()
-        {
-            byte[]? packet = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x68, 0x54, 0x00, 0xe4, 0x01, 0xc2, 0x16 };
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-            _client.Send(packet);
+        {            
+            var  pkt = _messages.NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
+            _client.Send(pkt);
         }
 
         public void ThrowTakeOff()
         {
-            byte[]? packet = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x48, 0x5d, 0x00, 0xe4, 0x01, 0xc2, 0x16 };
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-            _client.Send(packet);
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgDoThrowTakeoff, _controlSequence++, 0);
+            _client.Send(pkt);
         }
 
         public void Land()
         {
-            byte[]? packet = new byte[] { 0xcc, 0x60, 0x00, 0x27, 0x68, 0x55, 0x00, 0xe5, 0x01, 0x00, 0xba, 0xc7 };
-
-            //payload
-            packet[9] = 0x00;//todo. Find out what this is for.
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-            _client.Send(packet);
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
+            pkt.payload[0] = 0; // see StopLanding() for use of this field
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer); 
         }
+
+        public void StopLanding()
+        {
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
+            pkt.payload[0] = 1;  
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+        }
+
+        public void PalmLanding()
+        {
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoPalmLand, _controlSequence++, 1);
+            pkt.payload[0] = 0;
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+        }
+
+        public void Bounce()
+        {
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoBounce, _controlSequence++, 1);
+
+            if (ctrlBouncing)
+            {
+                pkt.payload[0] = 0x31;
+                ctrlBouncing = false;
+            }
+            else
+            {
+                pkt.payload[0] = 0x30;
+                ctrlBouncing = true;
+            }
+
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+        }
+
 
         public void RequestIFrame()
         {
@@ -89,7 +130,7 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void queryUnk(int cmd)
+        public void QueryUnk(int cmd)
         {
             byte[]? packet = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x48, 0xff, 0x00, 0x06, 0x00, 0xe9, 0xb3 };
             packet[5] = (byte)cmd;
@@ -147,18 +188,22 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void DoFlip(int dir)
+        public void DoFlip(FlipType dir)
         {
+            var pkt = _messages.NewPacket(PacketType.ptFlip, MessageTypes.msgDoFlip, _controlSequence++, 1);
+            pkt.payload[0] = (byte)dir;
+            var buffer = _messages.PacketToBuffer(pkt);
+            _client.Send(buffer);
+
+
             //                                          crc    typ  cmdL  cmdH  seqL  seqH  dirL  crc   crc
-            byte[]? packet = new byte[] { 0xcc, 0x60, 0x00, 0x27, 0x70, 0x5c, 0x00, 0x09, 0x00, 0x00, 0x5b, 0xc5 };
+            //byte[]? packet = new byte[] { 0xcc, 0x60, 0x00, 0x27, 0x70, 0x5c, 0x00, 0x09, 0x00, 0x00, 0x5b, 0xc5 };
 
             //payload
-            packet[9] = (byte)(dir & 0xff);
-
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-
-            _client.Send(packet);
+            //packet[9] = (byte)(dir & 0xff);
+            //SetPacketSequence(packet);
+            //SetPacketCRC(packet);
+            //_client.Send(packet);
         }
 
         public void SetJpgQuality(int quality)
@@ -393,18 +438,18 @@ namespace TelloSharp
 
             if (_connectionState != ConnectionState.Disconnected)
             {
-                OnConnection(ConnectionState.Disconnected);
+                OnConnection?.Invoke(this, ConnectionState.Disconnected);
             }
 
             _connectionState = ConnectionState.Disconnected;
         }
 
-        private void Connect()
-        {            
+        private void ConnectClient()
+        {
             _client = UdpUser.ConnectTo("192.168.10.1", 8889);
 
             _connectionState = ConnectionState.Connecting;
-            OnConnection(_connectionState);
+            OnConnection?.Invoke(this, _connectionState);
 
             byte[] connectPacket = Encoding.UTF8.GetBytes("conn_req:\x00\x00");
             connectPacket[connectPacket.Length - 2] = 0x96;
@@ -419,12 +464,12 @@ namespace TelloSharp
             if (bPause && _connectionState == ConnectionState.Connected)
             {
                 _connectionState = ConnectionState.Paused;
-                OnConnection(_connectionState);
+                OnConnection?.Invoke(this, _connectionState);
             }
             else if (bPause == false && _connectionState == ConnectionState.Paused)
             {
                 //NOTE:send unpause and not connection event
-                OnConnection(ConnectionState.UnPausing);
+                OnConnection?.Invoke(this, ConnectionState.UnPausing);
                 _connectionState = ConnectionState.Connected;
             }
         }
@@ -465,7 +510,7 @@ namespace TelloSharp
                             {
                                 _connected = true;
                                 _connectionState = ConnectionState.Connected;
-                                OnConnection(_connectionState);
+                                OnConnection?.Invoke(this, _connectionState);
 
                                 StartHeartbeat();
                                 RequestIFrame();
@@ -604,10 +649,7 @@ namespace TelloSharp
                                     SendAckFilePiece(1, 0, maxPieceNum);
                                     SendAckFileDone((int)picBytesExpected);
 
-                                    //HACK.
-                                    //Send file done cmdId to the update listener so it knows the picture is done.                                     
-                                    OnUpdate(100);
-                                    //This is a hack because it is faking a message. And not a very good fake.
+                                    OnUpdate?.Invoke(this, new TelloStateEventArgs(State, 100));
 
                                     Console.WriteLine("\nDONE PN:" + pieceNum + " max: " + maxPieceNum);
 
@@ -631,7 +673,7 @@ namespace TelloSharp
                         //send command to listeners. 
                         try
                         {
-                            OnUpdate(cmdId);
+                            OnUpdate?.Invoke(this, new TelloStateEventArgs(State, cmdId));
                         }
                         catch (Exception ex)
                         {
@@ -646,42 +688,10 @@ namespace TelloSharp
                     }
                 }
             }, token);
-
-
-            Task.Factory.StartNew(async () =>
-            {
-                bool started = false;
-                while (true)
-                {
-                    try
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        Received received = await videoServer.Receive();
-                        if (received.bytes[2] == 0 && received.bytes[3] == 0 && received.bytes[4] == 0 && received.bytes[5] == 1)//Wait for first NAL
-                        {
-                            int nal = (received.bytes[6] & 0x1f);
-                            started = true;
-                        }
-                        if (started)
-                        {
-                            onVideoData(received.bytes);
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Video receive thread error:" + ex.Message);
-                    }
-                }
-            }, token);
         }
 
         public delegate float[] GetControllerDeligate();
-        public GetControllerDeligate GetControllerCallback;
+        public GetControllerDeligate? GetControllerCallback;
 
         private void StartHeartbeat()
         {
@@ -739,7 +749,7 @@ namespace TelloSharp
             };
         }
 
-        public void StartConnecting()
+        public void Connect()
         {
             _ = Task.Factory.StartNew(async () =>
               {
@@ -751,10 +761,8 @@ namespace TelloSharp
                           switch (_connectionState)
                           {
                               case ConnectionState.Disconnected:
-
-                                  Connect();
+                                  ConnectClient();
                                   lastMessageTime = DateTime.Now;
-
                                   StartListeners();
                                   break;
                               case ConnectionState.Connecting:
@@ -804,6 +812,7 @@ namespace TelloSharp
 
         public ControllerState _controllerState = new ControllerState();
         public ControllerState _autoPilotControllerState = new ControllerState();
+        private bool ctrlBouncing;
 
         public float Clamp(float value, float min, float max)
         {
@@ -938,7 +947,7 @@ namespace TelloSharp
             private int wifiDisturb;
             private int wifiStrength;
             private bool windState;
-                        
+
             private float velX;
             private float velY;
             private float velZ;
@@ -1063,7 +1072,7 @@ namespace TelloSharp
                 temperatureHeight = (data[index] >> 0 & 0x1);//23            
                 wifiStrength = tello._wifiStrength;//Wifi str comes in a cmd.
             }
-                        
+
             public void ParseLog(byte[] data)
             {
                 int pos = 0;
@@ -1079,7 +1088,7 @@ namespace TelloSharp
                     {
                         break;
                     }
-                    
+
                     ushort id = BitConverter.ToUInt16(data, pos + 4);
                     byte[]? xorBuf = new byte[256];
                     byte xorValue = data[pos + 6];
@@ -1091,7 +1100,7 @@ namespace TelloSharp
                                 xorBuf[i] = (byte)(data[pos + i] ^ xorValue);
                             }
 
-                            int index = 10;                            
+                            int index = 10;
                             velX = BitConverter.ToInt16(xorBuf, index); index += 2;
                             velY = BitConverter.ToInt16(xorBuf, index); index += 2;
                             velZ = BitConverter.ToInt16(xorBuf, index); index += 2;
@@ -1121,6 +1130,7 @@ namespace TelloSharp
                     pos += len;
                 }
             }
+
             public double[] ToEuler()
             {
                 float qX = quatX;
