@@ -70,5 +70,20 @@ namespace TelloSharp.WinformsExample
         {
             tello.DoFlip(FlipType.FlipLeft);
         }
+
+        private void btnStartSmartVideo_Click(object sender, EventArgs e)
+        {
+            tello.StartSmartVideo(SmartVideoCmd.Sv360);
+        }
+
+        private void btnStopSmartVideo_Click(object sender, EventArgs e)
+        {
+            tello.StopSmartVideo(SmartVideoCmd.Sv360);
+        }
+
+        private void btnHover_Click(object sender, EventArgs e)
+        {
+            tello.Hover();
+        }
     }
 }
