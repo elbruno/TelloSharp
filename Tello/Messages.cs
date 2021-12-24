@@ -111,19 +111,17 @@
             Sv360 = 1 << 2,     // Slowly rotate around 360 degrees.
             SvCircle = 2 << 2,  // Circle around a point in front of the drone.
             SvUpOut = 3 << 2    // Perform the 'Up and Out' manouvre.
+        }      
+        
+        public enum VBR
+        {        
+            VbrAuto,
+            Vbr1M,
+            Vbr1M5,
+            Vbr2M,
+            Vbr3M,
+            Vbr4M
         }
-
-
-        // VBR is a Video Bit Rate, the int value is meaningless.
-        private readonly byte VBR;
-
-        // VBR settings...
-        private readonly byte VbrAuto;// = iota // let the Tello choose the best for the current connection
-        private readonly byte Vbr1M;              // Set the VBR to 1Mbps
-        private readonly byte Vbr1M5;             // Set the VBR to 1.5Mbps
-        private readonly byte Vbr2M;              // Set the VBR to 2Mbps
-        private readonly byte Vbr3M;              // Set the VBR to 3Mbps
-        private readonly byte Vbr4M;              // Set the VBR to 4mbps
 
 
         private const byte vmNormal = 0;
@@ -136,42 +134,41 @@
         // Known File Types...
         private const byte FtJPEG = 1;
 
-        private struct FileData
+        public struct FileData
         {
-            private readonly byte FileType; // 1 = JPEG
-            private readonly int FileSize;
-            private readonly byte[] FileBytes;
+            public byte FileType; // 1 = JPEG
+            public int FileSize;
+            public byte[] FileBytes;
         }
 
-        private struct FileInternal
+        public struct FileInternal
         {
-            private readonly short fID;
-            private readonly byte filetype;
-            private readonly int expectedSize;
-            private readonly int accumSize;
-            private readonly byte[] filePiece;
+            public short fID;
+            public byte filetype;
+            public int expectedSize;
+            public int accumSize;
+            public FilePiece[] filePieces;
         }
 
-        private struct FilePiece
+        public struct FilePiece
         {
-            //fID       uint16
-            private readonly int numChunks;
-            private readonly byte[] fileChunk;
+            public int numChunks;
+            public FileChunk[] chunks;
         }
 
-        private struct FileChunk
+        public struct FileChunk
         {
-            private readonly short fID;
-            private readonly uint pieceNum;
-            private readonly uint chunkNum;
-            private readonly short chunkLen;
-            private readonly byte[] chunkData;
+            public short fID;
+            public uint pieceNum;
+            public uint chunkNum;
+            public short chunkLen;
+            public byte[] chunkData;
         }
 
         // FlightData holds our current knowledge of the drone's state.
         // This data is not all sent at once from the drone, different fields may be updated
         // at varying rates.
-        internal struct FlightData
+        public class FlightData
         {
             public bool BatteryCritical;
             public bool BatteryLow;
@@ -214,21 +211,21 @@
             public byte ThrowFlyTimer;
             public string Version;
             public short VerticalSpeed;
-            public object VideoBitrate;
+            public VBR VideoBitrate;
             public short WifiInterference;
             public short WifiStrength;
             public bool WindState;
         }
 
         // MVOData comes from the flight log messages
-        internal struct MVOData
+        public struct MVOData
         {
             public float PositionX, PositionY, PositionZ;
             public short VelocityX, VelocityY, VelocityZ;
         }
 
         // IMUData comes from the flight log messages
-        internal struct IMUData
+        public struct IMUData
         {
             public float QuaternionW, QuaternionX, QuaternionY, QuaternionZ;
             public short Temperature;
@@ -239,40 +236,45 @@
         // Each value can range from -32768 to 32767
         internal struct StickMessage
         {
-            private readonly short Rx, Ry, Lx, Ly;
+            public short Rx, Ry, Lx, Ly;
         }
 
-        private const char logRecordSeparator = 'U';
+        public const char logRecordSeparator = 'U';
 
         // flight log message IDs
-        private const byte logRecNewMVO = 0x001d;
-        private const short logRecIMU = 0x0800;
+        public enum LogRecTypes
+        {
+            logRecNewMVO = 0x001d,
+            logRecIMU = 0x0800
+        }
 
         // TODO - there are many more 
-        private const byte logValidVelX = 0x01;
-        private const byte logValidVelY = 0x02;
-        private const byte logValidVelZ = 0x04;
-        private const byte logValidPosY = 0x10;
-        private const byte logValidPosX = 0x20;
-        private const byte logValidPosZ = 0x40;
-
+        public struct LogValidVe
+        {
+            public const byte logValidVelX = 0x01;
+            public const byte logValidVelY = 0x02;
+            public const byte logValidVelZ = 0x04;
+            public const byte logValidPosY = 0x10;
+            public const byte logValidPosX = 0x20;
+            public const byte logValidPosZ = 0x40;
+        }
 
         // utility funcs for message handling
 
         // bufferToPacket takes a raw buffer of bytes and populates our packet struct
         internal Packet BufferToPacket(byte[] buff)
         {
-            Packet pkt = new Packet
+            Packet pkt = new()
             {
                 header = buff[0],
-                size13 = (short)((buff[1] + (buff[2]) << 8) >> 3),
+                size13 = (short)((buff[1] + buff[2] << 8) >> 3),
                 crc8 = buff[3],
                 fromDrone = (buff[4] & 0x80) == 1,
                 toDrone = (buff[4] & 0x40) == 1,
-                packetType = ((short)((buff[4] >> 3) & 0x07)),
-                packetSubtype = ((short)(buff[4] & 0x07)),
-                messageID = (short)(((buff[6]) << 8) | (buff[5])),
-                sequence = (short)(((buff[8]) << 8) | (buff[7]))
+                packetType = (short)((buff[4] >> 3) & 0x07),
+                packetSubtype = (short)(buff[4] & 0x07),
+                messageID = (short)(((buff[6]) << 8) | buff[5]),
+                sequence = (short)(((buff[8]) << 8) | buff[7])
             };
             payloadSize = new byte[pkt.size13 - 11];
             if (payloadSize.Length > 0)
@@ -280,7 +282,7 @@
                 pkt.payload = payloadSize;
                 Array.Copy(pkt.payload, buff, 9 + payloadSize.Length);
             }
-            pkt.crc16 = (short)((buff[pkt.size13 - 1]) << (8 + (buff[pkt.size13 - 2])));
+            pkt.crc16 = (short)((buff[pkt.size13 - 1]) << 8 + buff[pkt.size13 - 2]);
             return pkt;
         }
 
@@ -407,24 +409,31 @@
             return fd;
         }
 
-        //func payloadToFileInfo(pl[]byte) (fType FileType, fSize uint32, fID uint16) {
-        //	fType = FileType(pl[0])
-        //	fSize = uint32(pl[1]) + uint32(pl[2]) << 8 + uint32(pl[3]) << 16 + uint32(pl[4]) << 24
-        //	fID = uint16(pl[5]) + uint16(pl[6]) << 8
-        //	return fType, fSize, fID
-        //}
+        public struct FileInfo
+        {
+            public byte fileType;
+            public int FileSize;
+            public short fId;
+        }
 
-        //func payloadToFileChunk(pl[]byte) (fc fileChunk) {
-        //	fc.fID = uint16(pl[0]) + uint16(pl[1]) << 8
-        //	fc.pieceNum = uint32(pl[2]) + uint32(pl[3]) << 8 + uint32(pl[4]) << 16 + uint32(pl[5]) << 24
-        //	fc.chunkNum = uint32(pl[6]) + uint32(pl[7]) << 8 + uint32(pl[8]) << 16 + uint32(pl[9]) << 24
-        //	fc.chunkLen = uint16(pl[10]) + uint16(pl[11]) << 8
-        //	fc.chunkData = pl[12:]
-        //	return fc
-        //}
+        public FileInfo PayloadToFileInfo(byte[] pl)
+        {
+            FileInfo info = new FileInfo();
+            info.fileType = pl[0];
+            info.FileSize = pl[1] + pl[2] << 8 + pl[3] << 16 + pl[4] << 24;
+            info.fId = (short)(pl[5] + pl[6] << 8);
+            return info;   
+        }
 
-        //private float bytesToFloat32(b[]byte) 
-        //{
-        //	return MathF.Float32frombits(binary.LittleEndian.Uint32(b))
+        public FileChunk PayloadToFileChunk(byte[] pl)
+        {
+            FileChunk fc = new FileChunk();
+            fc.fID = (short)(pl[0] + pl[1] << 8);
+            fc.pieceNum = (uint)(pl[2] + pl[3] << 8 + pl[4] << 16 + pl[5] << 24);
+            fc.chunkNum = (uint)((pl[6] + pl[7]) << (8 + pl[8]) << (16 + pl[9]) << 24);
+            fc.chunkLen = (short)((pl[10] + pl[11]) << 8);
+            fc.chunkData = pl.Skip(12).ToArray();
+            return fc;
+        }
     }
 }
