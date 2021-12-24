@@ -8,7 +8,8 @@ namespace TelloSharp
         private UdpUser _client;
         private FlyData _state;
         private Messages _messages;
-
+        public FlightData fd = new();
+        private FileInternal fileTemp;
         private DateTime lastMessageTime;//for connection timeouts.
         private readonly UdpListener videoServer = new UdpListener(6040);
 
@@ -19,7 +20,7 @@ namespace TelloSharp
 
         public event EventHandler<TelloStateEventArgs> OnUpdate;
         public event EventHandler<ConnectionState> OnConnection;
-        
+
         public string picPath;      //todo redo this. 
         public string picFilePath;  //todo redo this. 
         public int picMode = 0;     //pic or vid aspect ratio.
@@ -37,12 +38,10 @@ namespace TelloSharp
             UnPausing
         }
 
-
-
         public ConnectionState _connectionState = ConnectionState.Disconnected;
         private CancellationTokenSource _cancelTokens = new CancellationTokenSource();
         public CancellationTokenSource CancelTokens { get => _cancelTokens; set => _cancelTokens = value; }
-         
+
         public FlyData State => _state;
 
         public Tello()
@@ -53,8 +52,8 @@ namespace TelloSharp
         }
 
         public void TakeOff()
-        {            
-            var  pkt = _messages.NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
+        {
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
@@ -80,7 +79,7 @@ namespace TelloSharp
         /// </summary>
         /// <param name="cmd"></param>
         public void StartSmartVideo(SmartVideoCmd cmd)
-        {            
+        {
             var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
             pkt.payload[0] = (byte)((byte)cmd | 0x01);
             var buffer = _messages.PacketToBuffer(pkt);
@@ -98,13 +97,13 @@ namespace TelloSharp
             var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
             pkt.payload[0] = 0; // see StopLanding() for use of this field
             var buffer = _messages.PacketToBuffer(pkt);
-            _client.Send(buffer); 
+            _client.Send(buffer);
         }
 
         public void StopLanding()
         {
             var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
-            pkt.payload[0] = 1;  
+            pkt.payload[0] = 1;
             var buffer = _messages.PacketToBuffer(pkt);
             _client.Send(buffer);
         }
@@ -147,6 +146,7 @@ namespace TelloSharp
             pkt.messageID = MessageTypes.msgSetStick;
             pkt.sequence = 0;
             pkt.payload = new byte[11];
+            _controlSequence = 0;
 
             // This packing of the joystick data is just vile...
             int packedAxes = jsInt16ToTello(ctrlRx) & 0x07ff;
@@ -179,12 +179,21 @@ namespace TelloSharp
             _client.Send(buffer);
         }
 
+
         private int jsInt16ToTello(short sv)
         {
             // sv is in range -32768 to 32767, we need 660 to 1388 where 0 => 1024
             //return uint64((sv / 90) + 1024)
             // Changed this as new info (Oct 18) suggests range should be 364 to 1684...
             return (int)(sv / 49.672 + 1024);
+        }
+
+        private void UpdateSticks(StickMessage message)
+        {
+            ctrlRx = message.Rx;
+            ctrlRy = message.Ry;
+            ctrlLx = message.Lx;
+            ctrlLy = message.Ly;
         }
 
         private void SendDateTime()
@@ -223,29 +232,147 @@ namespace TelloSharp
             pkt.payload[14] = (byte)((byte)ms >> 8);
 
             var buffer = _messages.PacketToBuffer(pkt);
-            _client.Send(buffer); 
+            _client.Send(buffer);
         }
 
+        public void Forward(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = speed, Lx = 0, Ly = 0 });
+        }
+
+        public void Backward(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = (short)-speed, Lx = 0, Ly = 0 });
+        }
+
+        public void Left(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = (short)-speed, Ry = 0, Lx = 0, Ly = 0 });
+        }
+
+        public void Right(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = speed, Ry = 0, Lx = 0, Ly = 0 });
+        }
+
+        public void Up(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = 0, Ly = speed });
+        }
+
+        public void Down(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = 0, Ly = (short)-speed });
+        }
+
+        public void ClockWise(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = speed, Ly = 0 });
+        }
+
+        public void AntiClockWise(int pct)
+        {
+            short speed = 0;
+
+            if (pct > 0)
+            {
+                speed = (short)(pct * 327); // /100 * 32767
+            }
+            UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = (short)-speed, Ly = 0 });
+        }
+
+        public void SetSportsMode(bool sports)
+        {
+            ctrlSportsMode = sports;
+        }
+
+        public void SetFastMode()
+        {
+            SetSportsMode(true);
+        }
+
+        public void SetSlowMode()
+        {
+            SetSportsMode(false);
+        }
+
+        public void GetLowBatteryThreshold()
+        {
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryLowBattThresh, _controlSequence++, 0);
+            _client.Send(pkt);
+        }
+
+        public void GetMaxHeight()
+        {
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryHeightLimit, _controlSequence++, 0);
+            _client.Send(pkt);
+        }
+
+        public void GetSSID()
+        {
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQuerySSID, _controlSequence++, 0);
+            _client.Send(pkt);
+        }
+
+        public void GetVersion()
+        {
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryVersion, _controlSequence++, 0);
+            _client.Send(pkt);
+        }
+
+        public void SetLowBatteryThreshold(byte thr)
+        {
+            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgSetLowBattThresh, _controlSequence++, 1);
+            pkt.payload[0] = thr;
+            _client.Send(_messages.PacketToBuffer(pkt));
+        }
 
         public void RequestIFrame()
         {
             byte[]? iframePacket = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x60, 0x25, 0x00, 0x00, 0x00, 0x6c, 0x95 };
             _client.Send(iframePacket);
-        }
-
-        public void SetMaxHeight(int height)
-        {
-            //                                          crc    typ  cmdL  cmdH  seqL  seqH  heiL  heiH  crc   crc
-            byte[]? packet = new byte[] { 0xcc, 0x68, 0x00, 0x27, 0x68, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
-
-            //payload
-            packet[9] = (byte)(height & 0xff);
-            packet[10] = (byte)((height >> 8) & 0xff);
-
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-
-            _client.Send(packet);
         }
 
         public void QueryUnk(int cmd)
@@ -306,7 +433,7 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void DoFlip(FlipType dir)
+        public void Flip(FlipType dir)
         {
             var pkt = _messages.NewPacket(PacketType.ptFlip, MessageTypes.msgDoFlip, _controlSequence++, 1);
             pkt.payload[0] = (byte)dir;
@@ -449,12 +576,8 @@ namespace TelloSharp
 
         public void SendAckFileSize()
         {
-            //                                          crc    typ  cmdL  cmdH  seqL  seqH  modL  crc   crc
-            byte[]? packet = new byte[] { 0xcc, 0x60, 0x00, 0x27, 0x50, 0x62, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
-
-            _client.Send(packet);
+            var pkt = _messages.NewPacketAsBytes(PacketType.ptData1, MessageTypes.msgFileSize, _controlSequence++, 1);
+            _client.Send(pkt);            
         }
 
         public void SendAckFileDone(int size)
@@ -475,23 +598,28 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void SendAckLog(short cmd, ushort id)
+        public void SendAckLog(byte[] id)
         {
+            var pkt = _messages.NewPacket(PacketType.ptData1, MessageTypes.msgLogHeader, _controlSequence++, 3);
+            pkt.payload[1] = id[0];
+            pkt.payload[2] = id[1];
+            _client.Send(_messages.PacketToBuffer(pkt));
+
             //                                          crc    typ  cmdL  cmdH  seqL  seqH  unk   idL   idH   crc   crc
-            byte[]? packet = new byte[] { 0xcc, 0x70, 0x00, 0x27, 0x50, 0x50, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
+            //byte[]? packet = new byte[] { 0xcc, 0x70, 0x00, 0x27, 0x50, 0x50, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
 
-            byte[]? ba = BitConverter.GetBytes(cmd);
-            packet[5] = ba[0];
-            packet[6] = ba[1];
+            //byte[]? ba = BitConverter.GetBytes(cmd);
+            //packet[5] = ba[0];
+            //packet[6] = ba[1];
 
-            ba = BitConverter.GetBytes(id);
-            packet[10] = ba[0];
-            packet[11] = ba[1];
+            //ba = BitConverter.GetBytes(id);
+            //packet[10] = ba[0];
+            //packet[11] = ba[1];
 
-            SetPacketSequence(packet);
-            SetPacketCRC(packet);
+            //SetPacketSequence(packet);
+            //SetPacketCRC(packet);
 
-            _client.Send(packet);
+            //_client.Send(packet);
         }
 
         //this might not be working right 
@@ -620,7 +748,7 @@ namespace TelloSharp
                         }
 
                         Received received = await _client.Receive();
-                        lastMessageTime = DateTime.Now;//for timeouts
+                        lastMessageTime = DateTime.Now;
 
                         if (_connectionState == ConnectionState.Connecting)
                         {
@@ -637,166 +765,158 @@ namespace TelloSharp
                             }
                         }
 
-                        ushort cmdId = ((ushort)(received.bytes[5] | (received.bytes[6] << 8)));
+                        var pkt = _messages.BufferToPacket(received.bytes);
 
-                        if (cmdId >= 74 && cmdId < 80)
+                        switch (pkt.messageID)
                         {
-                            //Console.WriteLine("XXXXXXXXCMD:" + cmdId);
-                        }
-                        if (cmdId == 86)//state command
-                        {
-                            //update
-                            _state.Set(received.bytes.Skip(9).ToArray());
-                        }
-                        if (cmdId == 4176)//log header
-                        {
-                            //just ack.
-                            ushort id = BitConverter.ToUInt16(received.bytes, 9);
-                            SendAckLog((short)cmdId, id);
-                            //Console.WriteLine(id);
-                        }
-                        if (cmdId == 4177)//log data
-                        {
-                            try
-                            {
-                                _state.ParseLog(received.bytes.Skip(10).ToArray());
-                            }
-                            catch (Exception pex)
-                            {
-                                Console.WriteLine("parseLog error:" + pex.Message);
-                            }
-                        }
-                        if (cmdId == 4178)//log config
-                        {
-                            //todo. this doesnt seem to be working.
-                            //var id = BitConverter.ToUInt16(received.bytes, 9);
-                            //var n2 = BitConverter.ToInt32(received.bytes, 11);
-                            //sendAckLogConfig((short)cmdId, id,n2);
-                            //var dataStr = BitConverter.ToString(received.bytes.Skip(14).Take(10).ToArray()).Replace("-", " ")/*+"  "+pos*/;
-                            //Console.WriteLine(dataStr);
-                        }
-                        if (cmdId == 4185)//att angle response
-                        {
-                            byte[]? array = received.bytes.Skip(10).Take(4).ToArray();
-                            float f = BitConverter.ToSingle(array, 0);
-                            Console.WriteLine(f);
-                        }
-                        if (cmdId == 4182)//max hei response
-                        {
-                            //var array = received.bytes.Skip(9).Take(4).Reverse().ToArray();
-                            //float f = BitConverter.ToSingle(array, 0);
-                            //Console.WriteLine(f);
-                            if (received.bytes[10] != 10)
-                            {
+                            case MessageTypes.msgFileSize:
+                                picFilePath = picPath + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".jpg";
+                                Messages.FileInfo fi = _messages.PayloadToFileInfo(pkt.payload);
+                                fileTemp.fID = fi.fId;
+                                fileTemp.filetype = fi.fileType;
+                                fileTemp.expectedSize = fi.FileSize;
+                                fileTemp.accumSize = 0;
+                                fileTemp.filePieces = new FilePiece[1024];
+                                SendAckFileSize();
+                                break;
+                            case MessageTypes.msgFileData:
+                                int start = 9;
+                                ushort fileNum = BitConverter.ToUInt16(received.bytes, start);
+                                start += 2;
+                                uint pieceNum = BitConverter.ToUInt32(received.bytes, start);
+                                start += 4;
+                                uint seqNum = BitConverter.ToUInt32(received.bytes, start);
+                                start += 4;
+                                ushort size = BitConverter.ToUInt16(received.bytes, start);
+                                start += 2;
 
-                            }
-                        }
-                        if (cmdId == 26)//wifi str command
-                        {
-                            _wifiStrength = received.bytes[9];
-                            if (received.bytes[10] != 0)//Disturb?
-                            {
-                            }
-                        }
-                        if (cmdId == 53)//light str command
-                        {
-                        }
-                        if (cmdId == 98)//start jpeg.
-                        {
-                            picFilePath = picPath + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".jpg";
-
-                            int start = 9;
-                            byte ftype = received.bytes[start];
-                            start += 1;
-                            picBytesExpected = BitConverter.ToUInt32(received.bytes, start);
-                            if (picBytesExpected > picbuffer.Length)
-                            {
-                                Console.WriteLine("WARNING:Picture Too Big! " + picBytesExpected);
-                                picbuffer = new byte[picBytesExpected];
-                            }
-                            picBytesRecived = 0;
-                            picChunkState = new bool[(picBytesExpected / 1024) + 1]; //calc based on size. 
-                            picPieceState = new bool[(picChunkState.Length / 8) + 1];
-                            picExtraPackets = 0;//for debugging.
-                            picDownloading = true;
-
-                            SendAckFileSize();
-                        }
-                        if (cmdId == 99)//jpeg
-                        {
-                            //var dataStr = BitConverter.ToString(received.bytes.Skip(0).Take(30).ToArray()).Replace("-", " ");
-
-                            int start = 9;
-                            ushort fileNum = BitConverter.ToUInt16(received.bytes, start);
-                            start += 2;
-                            uint pieceNum = BitConverter.ToUInt32(received.bytes, start);
-                            start += 4;
-                            uint seqNum = BitConverter.ToUInt32(received.bytes, start);
-                            start += 4;
-                            ushort size = BitConverter.ToUInt16(received.bytes, start);
-                            start += 2;
-
-                            maxPieceNum = (ushort)Math.Max(pieceNum, maxPieceNum);
-                            if (!picChunkState[seqNum])
-                            {
-                                Array.Copy(received.bytes, start, picbuffer, seqNum * 1024, size);
-                                picBytesRecived += size;
-                                picChunkState[seqNum] = true;
-
-                                for (int p = 0; p < picChunkState.Length / 8; p++)
+                                maxPieceNum = (ushort)Math.Max(pieceNum, maxPieceNum);
+                                if (!picChunkState[seqNum])
                                 {
-                                    bool done = true;
-                                    for (int s = 0; s < 8; s++)
+                                    Array.Copy(received.bytes, start, picbuffer, seqNum * 1024, size);
+                                    picBytesRecived += size;
+                                    picChunkState[seqNum] = true;
+
+                                    for (int p = 0; p < picChunkState.Length / 8; p++)
                                     {
-                                        if (!picChunkState[(p * 8) + s])
+                                        bool done = true;
+                                        for (int s = 0; s < 8; s++)
                                         {
-                                            done = false;
-                                            break;
+                                            if (!picChunkState[(p * 8) + s])
+                                            {
+                                                done = false;
+                                                break;
+                                            }
+                                        }
+                                        if (done && !picPieceState[p])
+                                        {
+                                            picPieceState[p] = true;
+                                            SendAckFilePiece(0, fileNum, (uint)p);
                                         }
                                     }
-                                    if (done && !picPieceState[p])
+                                    if (picFilePath != null && picBytesRecived >= picBytesExpected)
                                     {
-                                        picPieceState[p] = true;
-                                        SendAckFilePiece(0, fileNum, (uint)p);
+                                        picDownloading = false;
+
+                                        SendAckFilePiece(1, 0, maxPieceNum);
+                                        SendAckFileDone((int)picBytesExpected);
+
+                                        OnUpdate?.Invoke(this, new TelloStateEventArgs(State, 100));
+
+                                        Console.WriteLine("\nDONE PN:" + pieceNum + " max: " + maxPieceNum);
+
+                                        //Save raw data minus sequence.
+                                        using (FileStream? stream = new FileStream(picFilePath, FileMode.Append))
+                                        {
+                                            stream.Write(picbuffer, 0, (int)picBytesExpected);
+                                        }
                                     }
                                 }
-                                if (picFilePath != null && picBytesRecived >= picBytesExpected)
+                                else
                                 {
-                                    picDownloading = false;
-
-                                    SendAckFilePiece(1, 0, maxPieceNum);
-                                    SendAckFileDone((int)picBytesExpected);
-
-                                    OnUpdate?.Invoke(this, new TelloStateEventArgs(State, 100));
-
-                                    Console.WriteLine("\nDONE PN:" + pieceNum + " max: " + maxPieceNum);
-
-                                    //Save raw data minus sequence.
-                                    using (FileStream? stream = new FileStream(picFilePath, FileMode.Append))
-                                    {
-                                        stream.Write(picbuffer, 0, (int)picBytesExpected);
-                                    }
+                                    picExtraPackets++;//for debugging.
                                 }
-                            }
-                            else
-                            {
-                                picExtraPackets++;//for debugging.
-                            }
-                        }
-                        if (cmdId == 100)
-                        {
+                                break;
+                            case MessageTypes.msgFlightStatus:
+                                var tmpFd = _messages.PayloadToFlightData(pkt.payload);
+                                // not all fields are sent...
+                                fd.BatteryCritical = tmpFd.BatteryCritical;
+                                fd.BatteryLow = tmpFd.BatteryLow;
+                                fd.BatteryMilliVolts = tmpFd.BatteryMilliVolts;
+                                fd.BatteryPercentage = tmpFd.BatteryPercentage;
+                                fd.BatteryState = tmpFd.BatteryState;
+                                fd.CameraState = tmpFd.CameraState;
+                                fd.DownVisualState = tmpFd.DownVisualState;
+                                fd.DroneFlyTimeLeft = tmpFd.DroneFlyTimeLeft;
+                                fd.DroneHover = tmpFd.DroneHover;
+                                fd.EastSpeed = tmpFd.EastSpeed;
+                                fd.ElectricalMachineryState = tmpFd.ElectricalMachineryState;
+                                fd.EmOpen = tmpFd.EmOpen;
+                                fd.ErrorState = tmpFd.ErrorState;
+                                fd.FactoryMode = tmpFd.FactoryMode;
+                                fd.Flying = tmpFd.Flying;
+                                fd.FlyMode = tmpFd.FlyMode;
+                                fd.FlyTime = tmpFd.FlyTime;
+                                fd.FrontIn = tmpFd.FrontIn;
+                                fd.FrontLSC = tmpFd.FrontLSC;
+                                fd.FrontOut = tmpFd.FrontOut;
+                                fd.GravityState = tmpFd.GravityState;
+                                fd.Height = tmpFd.Height;
+                                fd.ImuCalibrationState = tmpFd.ImuCalibrationState;
+                                fd.ImuState = tmpFd.ImuState;
+                                fd.NorthSpeed = tmpFd.NorthSpeed;
+                                fd.OnGround = tmpFd.OnGround;
+                                fd.OutageRecording = tmpFd.OutageRecording;
+                                fd.PowerState = tmpFd.PowerState;
+                                fd.PressureState = tmpFd.PressureState;
+                                fd.ThrowFlyTimer = tmpFd.ThrowFlyTimer;
+                                fd.VerticalSpeed = (short)-tmpFd.VerticalSpeed; // seems to be inverted
+                                fd.WindState = tmpFd.WindState;
+                                break;
+                            case MessageTypes.msgLightStrength:
+                                fd.LightStrength = pkt.payload[0];
+                                fd.LightStrengthUpdated = DateTime.Now;
+                                break;
+                            case MessageTypes.msgLogConfig:
+                                break;
+                            case MessageTypes.msgLogHeader:
+                                SendAckLog(pkt.payload.Take(2).ToArray());
+                                break;
+                            case MessageTypes.msgLogData:
+                                ParseLogPacket(pkt.payload);
+                                break;
+                            case MessageTypes.msgQueryHeightLimit:
+                                fd.MaxHeight = pkt.payload[1];
+                                break;
+                            case MessageTypes.msgQueryLowBattThresh:
+                                fd.LowBatteryThreshold = pkt.payload[1];
+                                break;
+                            case MessageTypes.msgQuerySSID:
+                                fd.SSID = pkt.payload.Skip(2).ToString();
+                                break;
+                            case MessageTypes.msgQueryVersion:
+                                fd.Version = pkt.payload.Skip(1).ToString();
+                                break;
+                            case MessageTypes.msgQueryVideoBitrate:
+                                fd.VideoBitrate = (VBR)pkt.payload[0];
+                                break;
+                            case MessageTypes.msgSetDateTime:
+                                SendDateTime();
+                                break;
+                            case MessageTypes.msgSetLowBattThresh:
+                                break;
+                            case MessageTypes.msgSmartVideoStatus:
+                                break;
+                            case MessageTypes.msgSwitchPicVideo:
+                                break;
+                            case MessageTypes.msgWifiStrength:
+                                fd.WifiStrength = pkt.payload[0];
+                                break;
+                            default:
+                                break;
 
                         }
-
-                        //send command to listeners. 
-                        try
-                        {
-                            OnUpdate?.Invoke(this, new TelloStateEventArgs(State, cmdId));
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("onUpdate error:" + ex.Message);
-                        }
+                        OnUpdate?.Invoke(this, new TelloStateEventArgs(State, pkt.messageID));
                     }
                     catch (Exception eex)
                     {
@@ -806,6 +926,132 @@ namespace TelloSharp
                     }
                 }
             }, token);
+        }
+
+       
+
+        private void SendFileDone(short fID, object accumSize)
+        {
+            var pkt = _messages.NewPacket(PacketType.ptGet, MessageTypes.msgFileDone, _controlSequence++, 6);
+            pkt.payload[0] = (byte)fID;
+            pkt.payload[1] = (byte)((byte)fID >> 8);
+            pkt.payload[2] = (byte)accumSize;
+            pkt.payload[3] = (byte)((byte)accumSize >> 8);
+            pkt.payload[4] = (byte)((byte)accumSize >> 16);
+            pkt.payload[5] = (byte)((byte)accumSize >> 24);
+            _client.Send(_messages.PacketToBuffer(pkt));
+        }
+
+        private void SendFileAckPiece(byte done, short fID, uint pieceNum)
+        {
+            var pkt = _messages.NewPacket(PacketType.ptData1, MessageTypes.msgFileData, _controlSequence++, 7);
+            pkt.payload[0] = done;
+            pkt.payload[1] = (byte)fID;
+            pkt.payload[2] = (byte)(fID >> 8);
+            pkt.payload[3] = (byte)pieceNum;
+            pkt.payload[4] = (byte)(pieceNum >> 8);
+            pkt.payload[5] = (byte)((byte)pieceNum >> 16);
+            pkt.payload[6] = (byte)((byte)pieceNum >> 24);
+            _client.Send(_messages.PacketToBuffer(pkt));
+        }
+
+        private void ParseLogPacket(byte[] data)
+        {
+            var pos = 1;
+
+            if (data.Length < 2)
+            {
+                return;
+            }
+
+            for (int i = 0; i < data.Length - 6; i++)
+            {
+                if (data[pos] != logRecordSeparator)
+                {
+                    break;
+                }
+            }
+
+            var recLen = data[pos + 1] + data[pos + 2] << 8;
+            var logRecType = data[pos + 4] + data[pos + 5] << 8;
+
+            var xorBuf = new byte[256];
+            var xorVal = data[pos + 6];
+
+            switch (logRecType)
+            {
+                case (int)LogRecTypes.logRecNewMVO:
+                    for (var i = 0; i < recLen && pos + i < data.Length; i++)
+                    {
+                        xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
+
+                    }
+                    var offset = 10;
+                    var flags = data[offset + 76];
+
+                    if ((flags & LogValidVe.logValidVelX) != 0)
+                    {
+                        fd.MVO.VelocityX = (short)(xorBuf[offset + 2] + xorBuf[offset + 3] << 8);
+                    }
+
+                    if ((flags & LogValidVe.logValidVelY) != 0)
+                    {
+                        fd.MVO.VelocityY = (short)(xorBuf[offset + 4] + xorBuf[offset + 5] << 8);
+                    }
+
+                    if ((flags & LogValidVe.logValidVelZ) != 0)
+                    {
+                        fd.MVO.VelocityZ = (short)(-xorBuf[offset + 6] + xorBuf[offset + 7] << 8);
+                    }
+
+                    if ((flags & LogValidVe.logValidPosY) != 0 && (flags & LogValidVe.logValidPosX) != 0 && (flags & LogValidVe.logValidPosZ) != 0)
+                    {
+                        fd.MVO.PositionY = BitConverter.ToSingle(xorBuf.Skip(offset + 8).Take(offset + 13).ToArray());
+                        fd.MVO.PositionX = BitConverter.ToSingle(xorBuf.Skip(offset + 12).Take(offset + 17).ToArray());
+                        fd.MVO.PositionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 16).Take(offset + 21).ToArray());
+                    }
+                    break;
+
+                case (int)LogRecTypes.logRecIMU:
+
+                    for (var i = 0; i < recLen && pos + i < data.Length; i++)
+                    {
+                        xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
+                    }
+                    offset = 10;
+
+                    fd.IMU.QuaternionW = BitConverter.ToSingle(xorBuf.Skip(offset + 48).Take(offset + 53).ToArray());
+                    fd.IMU.QuaternionX = BitConverter.ToSingle(xorBuf.Skip(offset + 52).Take(offset + 57).ToArray());
+                    fd.IMU.QuaternionY = BitConverter.ToSingle(xorBuf.Skip(offset + 56).Take(offset + 61).ToArray());
+                    fd.IMU.QuaternionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 60).Take(offset + 65).ToArray());
+                    fd.IMU.Temperature = (short)(xorBuf[offset + 106] + xorBuf[offset + 107] << 8 / 100);
+
+                    fd.IMU.Yaw = QuatToYawDeg(fd.IMU.QuaternionX, fd.IMU.QuaternionY, fd.IMU.QuaternionZ, fd.IMU.QuaternionW);
+                    pos += recLen;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+
+
+        private short QuatToYawDeg(float qX, float qY, float qZ, float qW)
+        {
+            const float degree = (float)(Math.PI / 180.0);
+            var qqX = (int)qX;
+            var qqY = (int)qY;
+            var qqZ = (int)qZ;
+            var qqW = (int)qW;
+            var sqY = qqY * qqY;
+            var sqZ = qqZ * qqZ;
+
+            var sinY = 2.0 * (qqW * qqZ + qqX * qqY);
+            var cosY = 1.0 - 2 * (sqY + sqZ);
+
+            var yaw = (short)(Math.Round(Math.Atan2(sinY, cosY) / degree));
+
+            return yaw;
         }
 
         public delegate float[] GetControllerDeligate();
@@ -1045,6 +1291,7 @@ namespace TelloSharp
             private bool onGround;
             private bool pressureState;
 
+            private bool batteryCritical;
             private int batteryPercentage;
             private bool batteryLow;
             private bool batteryLower;
@@ -1141,6 +1388,7 @@ namespace TelloSharp
             public float QuatY { get => quatY; set => quatY = value; }
             public float QuatZ { get => quatZ; set => quatZ = value; }
             public float QuatW { get => quatW; set => quatW = value; }
+            public bool BatteryCritical { get => batteryCritical; set => batteryCritical = value; }
 
             public FlyData(Tello tello)
             {
