@@ -22,7 +22,7 @@ namespace TelloSharp.Example
             tello.OnConnection += Tello_OnConnection;
             tello.OnUpdate += Tello_OnUpdate;
             tello.Connect();
-
+            
             while (!tello.CancelTokens.Token.IsCancellationRequested)
             {
                 var line = Console.ReadLine();
@@ -39,14 +39,18 @@ namespace TelloSharp.Example
         private static void Tello_OnConnection(object? sender, Tello.ConnectionState e)
         {
             if (e == Tello.ConnectionState.Connected)
+            {
                 Connected = true;
+                tello.GetSSID();
+                tello.GetVersion();
+            }
             if (e == Tello.ConnectionState.Disconnected)
                 Connected = false;
         }
 
         private static void Tello_OnUpdate(object? sender, TelloStateEventArgs e)
         {
-            if (e.LastCmdId == 86)
+            if (e.LastCmdId == Messages.MessageTypes.msgFlightStatus)
             {
                 //write update to log.
                 var elapsed = DateTime.Now - logStartTime;

@@ -1,4 +1,5 @@
-﻿using static TelloSharp.Tello;
+﻿using static TelloSharp.Messages;
+using static TelloSharp.Tello;
 
 namespace TelloSharp
 {
