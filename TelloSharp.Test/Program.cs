@@ -24,7 +24,7 @@ namespace TelloSharp.Test
             p.messageID = MessageTypes.msgDoTakeoff;
             p.sequence = 0;
             p.payload = new byte[0];
-            byte[] b = messages.PacketToBuffer(p);
+            byte[] b = PacketToBuffer(p);
             //  204
             //  88
             //  0

@@ -52,15 +52,15 @@ namespace TelloSharp
 
         public void TakeOff()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptSet, MessageTypes.msgDoTakeoff, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void StopSmartVideo(SmartVideoCmd cmd)
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
             pkt.payload[0] = (byte)cmd;
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
@@ -79,45 +79,45 @@ namespace TelloSharp
         /// <param name="cmd"></param>
         public void StartSmartVideo(SmartVideoCmd cmd)
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoSmartVideo, _controlSequence++, 1);
             pkt.payload[0] = (byte)((byte)cmd | 0x01);
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
         public void ThrowTakeOff()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgDoThrowTakeoff, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgDoThrowTakeoff, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void Land()
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
             pkt.payload[0] = 0; // see StopLanding() for use of this field
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
         public void StopLanding()
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoLand, _controlSequence++, 1);
             pkt.payload[0] = 1;
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
         public void PalmLanding()
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoPalmLand, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoPalmLand, _controlSequence++, 1);
             pkt.payload[0] = 0;
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
         public void Bounce()
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgDoBounce, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgDoBounce, _controlSequence++, 1);
 
             if (ctrlBouncing)
             {
@@ -130,56 +130,14 @@ namespace TelloSharp
                 ctrlBouncing = true;
             }
 
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
-        private void SendStickUpdate()
-        {
-            var pkt = new Packet();
-
-            // populate the command packet fields we need
-            pkt.header = msgHdr;
-            pkt.toDrone = true;
-            pkt.packetType = PacketType.ptData2;
-            pkt.messageID = MessageTypes.msgSetStick;
-            pkt.sequence = 0;
-            pkt.payload = new byte[11];
-            _controlSequence = 0;
-
-            // This packing of the joystick data is just vile...
-            int packedAxes = jsInt16ToTello(ctrlRx) & 0x07ff;
-            packedAxes |= (jsInt16ToTello(ctrlRy) & 0x07ff) << 11;
-            packedAxes |= (jsInt16ToTello(ctrlLy) & 0x07ff) << 22;
-            packedAxes |= (jsInt16ToTello(ctrlLx) & 0x07ff) << 33;
-
-            if (ctrlSportsMode)
-            {
-                packedAxes |= 1 << 44;
-            }
-
-            pkt.payload[0] = (byte)packedAxes;
-            pkt.payload[1] = (byte)(packedAxes >> 8);
-            pkt.payload[2] = (byte)(packedAxes >> 16);
-            pkt.payload[3] = (byte)(packedAxes >> 24);
-            pkt.payload[4] = (byte)(packedAxes >> 32);
-            pkt.payload[5] = (byte)(packedAxes >> 40);
-
-            var now = DateTime.Now;
-            pkt.payload[6] = (byte)now.Hour;
-            pkt.payload[7] = (byte)now.Minute;
-            pkt.payload[8] = (byte)now.Second;
-
-            var ms = DateTimeOffset.Now.ToUnixTimeSeconds() / 1000000;
-            pkt.payload[9] = (byte)(ms & 0xff);
-            pkt.payload[10] = (byte)(ms >> 8);
-
-            var buffer = _messages.PacketToBuffer(pkt);
-            _client.Send(buffer);
-        }
+ 
 
 
-        private int jsInt16ToTello(short sv)
+        private int Int16ToTello(short sv)
         {
             // sv is in range -32768 to 32767, we need 660 to 1388 where 0 => 1024
             //return uint64((sv / 90) + 1024)
@@ -224,13 +182,11 @@ namespace TelloSharp
             pkt.payload[9] = (byte)now.Minute;
             pkt.payload[10] = (byte)((byte)now.Minute >> 8);
             pkt.payload[11] = (byte)now.Second;
-            pkt.payload[12] = (byte)((byte)now.Second >> 8);
+            pkt.payload[12] = (byte)((byte)now.Second >> 8);            
+            pkt.payload[13] = (byte)now.Millisecond;
+            pkt.payload[14] = (byte)((byte)now.Millisecond >> 8);
 
-            var ms = DateTimeOffset.Now.ToUnixTimeSeconds() / 1000000;
-            pkt.payload[13] = (byte)ms;
-            pkt.payload[14] = (byte)((byte)ms >> 8);
-
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
@@ -339,41 +295,35 @@ namespace TelloSharp
 
         public void GetLowBatteryThreshold()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryLowBattThresh, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryLowBattThresh, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void GetMaxHeight()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryHeightLimit, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryHeightLimit, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void GetSSID()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQuerySSID, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQuerySSID, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void GetVersion()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryVersion, _controlSequence++, 0);
+            var pkt = NewPacketAsBytes(PacketType.ptGet, MessageTypes.msgQueryVersion, _controlSequence++, 0);
             _client.Send(pkt);
         }
 
         public void SetLowBatteryThreshold(byte thr)
         {
-            var pkt = _messages.NewPacket(PacketType.ptSet, MessageTypes.msgSetLowBattThresh, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptSet, MessageTypes.msgSetLowBattThresh, _controlSequence++, 1);
             pkt.payload[0] = thr;
-            _client.Send(_messages.PacketToBuffer(pkt));
-        }
-
-        public void RequestIFrame()
-        {
-            byte[]? iframePacket = new byte[] { 204, 0x58, 0x00, 0x7c, 0x60, 0x25, 0x00, 0x00, 0x00, 0x6c, 0x95 };
-            _client.Send(iframePacket);
-        }
-
+            _client.Send(PacketToBuffer(pkt));
+        } 
+ 
         public void QueryUnk(int cmd)
         {
             byte[]? packet = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x48, 0xff, 0x00, 0x06, 0x00, 0xe9, 0xb3 };
@@ -391,7 +341,7 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void queryMaxHeight()
+        public void QueryMaxHeight()
         {
             byte[]? packet = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x48, 0x56, 0x10, 0x06, 0x00, 0xe9, 0xb3 };
             SetPacketSequence(packet);
@@ -399,7 +349,7 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void setAttAngle(float angle)
+        public void SetAttAngle(float angle)
         {
             //                                          crc    typ  cmdL  cmdH  seqL  seqH  ang1  ang2 ang3  ang4  crc   crc
             byte[]? packet = new byte[] { 0xcc, 0x78, 0x00, 0x27, 0x68, 0x58, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
@@ -434,9 +384,9 @@ namespace TelloSharp
 
         public void Flip(FlipType dir)
         {
-            var pkt = _messages.NewPacket(PacketType.ptFlip, MessageTypes.msgDoFlip, _controlSequence++, 1);
+            var pkt = NewPacket(PacketType.ptFlip, MessageTypes.msgDoFlip, _controlSequence++, 1);
             pkt.payload[0] = (byte)dir;
-            var buffer = _messages.PacketToBuffer(pkt);
+            var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
 
@@ -565,7 +515,7 @@ namespace TelloSharp
 
         public void SendAckFileSize()
         {
-            var pkt = _messages.NewPacketAsBytes(PacketType.ptData1, MessageTypes.msgFileSize, _controlSequence++, 1);
+            var pkt = NewPacketAsBytes(PacketType.ptData1, MessageTypes.msgFileSize, _controlSequence++, 1);
             _client.Send(pkt);            
         }
 
@@ -589,10 +539,10 @@ namespace TelloSharp
 
         public void SendAckLogHeader(byte[] id)
         {
-            var pkt = _messages.NewPacket(PacketType.ptData1, MessageTypes.msgLogHeader, _controlSequence++, 3);
+            var pkt = NewPacket(PacketType.ptData1, MessageTypes.msgLogHeader, _controlSequence++, 3);
             pkt.payload[1] = id[0];
             pkt.payload[2] = id[1];
-            _client.Send(_messages.PacketToBuffer(pkt));
+            _client.Send(PacketToBuffer(pkt));
         }
 
         public void SendAckLogHeader(short cmd, ushort id)
@@ -639,26 +589,15 @@ namespace TelloSharp
 
         private void SetPacketSequence(byte[] packet)
         {
-            packet[7] = (byte)(sequence & 0xff);
-            packet[8] = (byte)((sequence >> 8) & 0xff);
-            sequence++;
+            packet[7] = (byte)(_controlSequence & 0xff);
+            packet[8] = (byte)((_controlSequence >> 8) & 0xff);
+            _controlSequence++;
         }
 
         private void SetPacketCRC(byte[] packet)
         {
             Crc.CalcUCRC(packet, 4);
             Crc.CalcCrc(packet, packet.Length);
-        }
-
-        public void SetEIS(int eis)
-        {
-        }
-
-        public void SetXAxis(float[] axis)
-        {
-            //joyAxis = axis.Take(5).ToArray(); ;
-            //joyAxis[4] = axis[7];
-            //joyAxis[3] = axis[11];
         }
 
         private void Disconnect()
@@ -707,7 +646,6 @@ namespace TelloSharp
         private bool[] picPieceState;
         private uint picBytesRecived;
         private uint picBytesExpected;
-        private uint picExtraPackets;
         public bool picDownloading;
         private ushort maxPieceNum = 0;
 
@@ -745,7 +683,7 @@ namespace TelloSharp
                             }
                         }
 
-                        var pkt = _messages.BufferToPacket(received.bytes);
+                        var pkt = BufferToPacket(received.bytes);
                         int cmdId = received.bytes[5] | (received.bytes[6] << 8);
 
                         var b = received.bytes.Skip(9).ToArray();
@@ -755,7 +693,7 @@ namespace TelloSharp
                         {
                             case MessageTypes.msgFileSize:
                                 picFilePath = picPath + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss") + ".jpg";
-                                Messages.FileInfo fi = _messages.PayloadToFileInfo(pkt.payload);
+                                Messages.FileInfo fi = PayloadToFileInfo(pkt.payload);
                                 fileTemp.fID = fi.fId;
                                 fileTemp.filetype = fi.fileType;
                                 fileTemp.expectedSize = fi.FileSize;
@@ -812,10 +750,6 @@ namespace TelloSharp
                                         using FileStream? stream = new(picFilePath, FileMode.Append);
                                         stream.Write(picbuffer, 0, (int)picBytesExpected);
                                     }
-                                }
-                                else
-                                {
-                                    picExtraPackets++;
                                 }
                                 break;
                             case MessageTypes.msgFlightStatus:
@@ -881,19 +815,19 @@ namespace TelloSharp
 
         private void SendFileDone(short fID, object accumSize)
         {
-            var pkt = _messages.NewPacket(PacketType.ptGet, MessageTypes.msgFileDone, _controlSequence++, 6);
+            var pkt = NewPacket(PacketType.ptGet, MessageTypes.msgFileDone, _controlSequence++, 6);
             pkt.payload[0] = (byte)fID;
             pkt.payload[1] = (byte)((byte)fID >> 8);
             pkt.payload[2] = (byte)accumSize;
             pkt.payload[3] = (byte)((byte)accumSize >> 8);
             pkt.payload[4] = (byte)((byte)accumSize >> 16);
             pkt.payload[5] = (byte)((byte)accumSize >> 24);
-            _client.Send(_messages.PacketToBuffer(pkt));
+            _client.Send(PacketToBuffer(pkt));
         }
 
         private void SendFileAckPiece(byte done, short fID, uint pieceNum)
         {
-            var pkt = _messages.NewPacket(PacketType.ptData1, MessageTypes.msgFileData, _controlSequence++, 7);
+            var pkt = NewPacket(PacketType.ptData1, MessageTypes.msgFileData, _controlSequence++, 7);
             pkt.payload[0] = done;
             pkt.payload[1] = (byte)fID;
             pkt.payload[2] = (byte)(fID >> 8);
@@ -901,90 +835,8 @@ namespace TelloSharp
             pkt.payload[4] = (byte)(pieceNum >> 8);
             pkt.payload[5] = (byte)((byte)pieceNum >> 16);
             pkt.payload[6] = (byte)((byte)pieceNum >> 24);
-            _client.Send(_messages.PacketToBuffer(pkt));
+            _client.Send(PacketToBuffer(pkt));
         }
-
-        private void ParseLogPacket(byte[] data)
-        {
-            var pos = 1;
-            if (data == null) return;
-
-            if (data.Length < 2)
-            {
-                return;
-            }
-
-            for (int i = 0; i < data.Length - 6; i++)
-            {
-                if (data[pos] != (byte)logRecordSeparator)
-                {
-                    break;
-                }
-            }
-
-            var recLen = data[pos + 1] + data[pos + 2] << 8;
-            var logRecType = data[pos + 4] + data[pos + 5] << 8;
-
-            var xorBuf = new byte[256];
-            var xorVal = data[pos + 6];
-
-            switch (logRecType)
-            {
-                case (int)LogRecTypes.logRecNewMVO:
-                    
-                    for (var i = 0; i < recLen && pos + i < data.Length; i++)
-                    {
-                        xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
-
-                    }
-                    var offset = 10;
-                    var flags = data[offset + 76];
-
-                    if ((flags & LogValidVe.logValidVelX) != 0)
-                    {
-                        _state.MVO.VelocityX = (short)(xorBuf[offset + 2] + xorBuf[offset + 3] << 8);
-                    }
-
-                    if ((flags & LogValidVe.logValidVelY) != 0)
-                    {
-                        _state.MVO.VelocityY = (short)(xorBuf[offset + 4] + xorBuf[offset + 5] << 8);
-                    }
-
-                    if ((flags & LogValidVe.logValidVelZ) != 0)
-                    {
-                        _state.MVO.VelocityZ = (short)(-xorBuf[offset + 6] + xorBuf[offset + 7] << 8);
-                    }
-
-                    if ((flags & LogValidVe.logValidPosY) != 0 && (flags & LogValidVe.logValidPosX) != 0 && (flags & LogValidVe.logValidPosZ) != 0)
-                    {
-                        _state.MVO.PositionY = BitConverter.ToSingle(xorBuf.Skip(offset + 8).Take(offset + 13).ToArray());
-                        _state.MVO.PositionX = BitConverter.ToSingle(xorBuf.Skip(offset + 12).Take(offset + 17).ToArray());
-                        _state.MVO.PositionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 16).Take(offset + 21).ToArray());
-                    }
-                    break;
-
-                case (int)LogRecTypes.logRecIMU:
-                    xorBuf = new byte[data.Length];
-                    for (var i = 0; i < recLen && pos + i < data.Length; i++)
-                    {
-                        xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
-                    }
-                    offset = 10;
-
-                    _state.IMU.QuaternionW = BitConverter.ToSingle(xorBuf.Skip(offset + 48).Take(offset + 53).ToArray());
-                    _state.IMU.QuaternionX = BitConverter.ToSingle(xorBuf.Skip(offset + 52).Take(offset + 57).ToArray());
-                    _state.IMU.QuaternionY = BitConverter.ToSingle(xorBuf.Skip(offset + 56).Take(offset + 61).ToArray());
-                    _state.IMU.QuaternionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 60).Take(offset + 65).ToArray());
-                    _state.IMU.Temperature = (short)((short)(xorBuf[offset + 106] + xorBuf[offset + 107] << 8) / 100);
-
-                    _state.IMU.Yaw = QuatToYawDeg(_state.IMU.QuaternionX, _state.IMU.QuaternionY, _state.IMU.QuaternionZ, _state.IMU.QuaternionW);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-
 
         private short QuatToYawDeg(float qX, float qY, float qZ, float qW)
         {
@@ -1018,7 +870,6 @@ namespace TelloSharp
         {
             return async () =>
             {
-                int tick = 0;
                 while (true)
                 {
 
@@ -1032,11 +883,7 @@ namespace TelloSharp
                         if (_connectionState == ConnectionState.Connected)
                         {
                             SendControllerUpdate();
-                            //tick++;
-                            //if ((tick % iFrameRate) == 0)
-                            //{
-                            //    RequestIFrame();
-                            //}
+                            UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = 0, Ly = 0 });
                         }
                         Thread.Sleep(40);
                     }
@@ -1059,6 +906,47 @@ namespace TelloSharp
                     }
                 }
             };
+        }
+
+        private void SendStickUpdate()
+        {
+            var pkt = new Packet
+            {
+                header = msgHdr,
+                toDrone = true,
+                packetType = PacketType.ptData2,
+                messageID = MessageTypes.msgSetStick,
+                sequence = 0,
+                payload = new byte[11]
+            };
+
+            // This packing of the joystick data is just vile...
+            int packedAxes = Int16ToTello(ctrlRx) & 0x07ff;
+            packedAxes |= (Int16ToTello(ctrlRy) & 0x07ff) << 11;
+            packedAxes |= (Int16ToTello(ctrlLy) & 0x07ff) << 22;
+            packedAxes |= (Int16ToTello(ctrlLx) & 0x07ff) << 33;
+
+            if (ctrlSportsMode)
+            {
+                packedAxes |= 1 << 44;
+            }
+
+            pkt.payload[0] = (byte)packedAxes;
+            pkt.payload[1] = (byte)(packedAxes >> 8);
+            pkt.payload[2] = (byte)(packedAxes >> 16);
+            pkt.payload[3] = (byte)(packedAxes >> 24);
+            pkt.payload[4] = (byte)(packedAxes >> 32);
+            pkt.payload[5] = (byte)(packedAxes >> 40);
+
+            var now = DateTime.Now;
+            pkt.payload[6] = (byte)now.Hour;
+            pkt.payload[7] = (byte)now.Minute;
+            pkt.payload[8] = (byte)now.Second;
+            pkt.payload[9] = (byte)(now.Millisecond & 0xff);
+            pkt.payload[10] = (byte)(now.Millisecond >> 8);
+
+            var buffer = PacketToBuffer(pkt);
+            _client.Send(buffer);
         }
 
         public void Connect()
@@ -1100,8 +988,8 @@ namespace TelloSharp
               });
         }
 
-        public ControllerState _controllerState = new();
         public ControllerState _autoPilotControllerState = new();
+
         private bool ctrlBouncing;
         private bool ctrlSportsMode;
         private short ctrlRx;
@@ -1122,15 +1010,15 @@ namespace TelloSharp
             }
 
             float boost = 0.0f;
-            if (_controllerState.Speed > 0)
+            if (ctrlSportsMode)
             {
                 boost = 1.0f;
             }
 
-            float rx = _controllerState.Rx;
-            float ry = _controllerState.Ry;
-            float lx = _controllerState.Lx;
-            float ly = _controllerState.Ly;
+            float rx = ctrlRx;
+            float ry = ctrlRy;
+            float lx = ctrlLx;
+            float ly = ctrlLy;
 
             if (true)
             {
@@ -1141,6 +1029,7 @@ namespace TelloSharp
             }
 
             byte[]? packet = CreateJoyPacket(rx, ry, lx, ly, boost);
+
             try
             {
                 _client.Send(packet);
@@ -1149,14 +1038,6 @@ namespace TelloSharp
             {
             }
         }
-
-        private readonly Dictionary<int, string> cmdIdLookup = new Dictionary<int, string>
-            {
-                { 26, "Wifi" },//2 bytes. Strength, Disturb.
-                { 53, "Light" },//1 byte?
-                { 86, "FlyData" },
-                { 4176, "Data" },//wtf?
-            };
 
         //Create joystick packet from floating point axis.
         //Center = 0.0. 

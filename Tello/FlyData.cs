@@ -108,34 +108,37 @@ namespace TelloSharp
             public byte WifiStrength { get => wifiStrength; set => wifiStrength = value; }
             public byte WifiInterference { get; internal set; }
             public bool WindState { get => windState; set => windState = value; }
-            public float VelX { get => velX; set => velX = value; }
-            public float VelY { get => velY; set => velY = value; }
-            public float VelZ { get => velZ; set => velZ = value; }
-            public float PosX { get => posX; set => posX = value; }
-            public float PosY { get => posY; set => posY = value; }
-            public float PosZ { get => posZ; set => posZ = value; }
+            public float VelX { get => MVO.VelocityX; set => mVO.VelocityX = (short)value; }
+            public float VelY { get => MVO.VelocityY; set => mVO.VelocityY = (short)value; }
+            public float VelZ { get => MVO.VelocityZ; set => mVO.VelocityZ = (short)value; }
+            public float PosX { get => MVO.PositionX; set => mVO.PositionX = value; }
+            public float PosY { get => MVO.PositionY; set => mVO.PositionY = value; }
+            public float PosZ { get => MVO.PositionZ; set => mVO.PositionZ = value; }
             public float PosUncertainty { get => posUncertainty; set => posUncertainty = value; }
             public float VelN { get => velN; set => velN = value; }
             public float VelE { get => velE; set => velE = value; }
-            public float QuatX { get => quatX; set => quatX = value; }
-            public float QuatY { get => quatY; set => quatY = value; }
-            public float QuatZ { get => quatZ; set => quatZ = value; }
-            public float QuatW { get => quatW; set => quatW = value; }
+            public float QuatX { get => IMU.QuaternionX; set => iMU.QuaternionX = value; }
+            public float QuatY { get => IMU.QuaternionY; set => iMU.QuaternionY = value; }
+            public float QuatZ { get => IMU.QuaternionZ; set => iMU.QuaternionZ = value; }
+            public float QuatW { get => IMU.QuaternionW; set => iMU.QuaternionW = value; }
             public bool BatteryCritical { get => batteryCritical; set => batteryCritical = value; }
             public byte MaxHeight { get; internal set; }
             public byte LowBatteryThreshold { get; internal set; }
             public string? SSID { get; internal set; }
             public string? Version { get; internal set; }
 
-            public Messages.VBR VideoBitrate { get; set; }
-            public Messages.MVOData MVO;
-            public Messages.IMUData IMU;
+            public VBR VideoBitrate { get; set; }
+            public IMUData IMU { get => iMU; set => iMU = value; }
+            public MVOData MVO { get => mVO; set => mVO = value; }
+
+            private MVOData mVO;
+            private IMUData iMU;
 
             public FlyData(Tello tello)
             {
                 this.tello = tello;
-                MVO = new Messages.MVOData();
-                IMU = new Messages.IMUData();
+                MVO = new MVOData();
+                IMU = new IMUData();
             }
 
             public void Set(byte[] data)
@@ -184,7 +187,7 @@ namespace TelloSharp
                 frontLSC = (data[index] >> 2 & 0x1) == 1;
                 index += 1;
                 temperatureHeight = (data[index] >> 0 & 0x1);//23            
-                wifiStrength = tello._wifiStrength;//Wifi str comes in a cmd.
+                wifiStrength = tello._wifiStrength;                
             }
 
             public void ParseLog(byte[] data)
@@ -215,13 +218,13 @@ namespace TelloSharp
                             }
 
                             int index = 10;
-                            velX = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            velY = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            velZ = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            posX = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posY = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posZ = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posUncertainty = BitConverter.ToSingle(xorBuf, index) * 10000.0f; index += 4;
+                            mVO.VelocityX = BitConverter.ToInt16(xorBuf, index); index += 2;
+                            mVO.VelocityY = BitConverter.ToInt16(xorBuf, index); index += 2;
+                            mVO.VelocityZ = BitConverter.ToInt16(xorBuf, index); index += 2;
+                            mVO.PositionX = BitConverter.ToSingle(xorBuf, index); index += 4;
+                            mVO.PositionY = BitConverter.ToSingle(xorBuf, index); index += 4;
+                            mVO.PositionZ = BitConverter.ToSingle(xorBuf, index); index += 4;
+                            posUncertainty = BitConverter.ToSingle(xorBuf, index) * 10000.0f;                             
                             break;
                         case (ushort)LogRecTypes.logRecIMU:
                             for (int i = 0; i < len; i++)
@@ -230,10 +233,10 @@ namespace TelloSharp
                             }
 
                             int index2 = 10 + 48;//44 is the start of the quat data.
-                            quatW = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatX = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatY = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatZ = BitConverter.ToSingle(xorBuf, index2);
+                            iMU.QuaternionW = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
+                            iMU.QuaternionX = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
+                            iMU.QuaternionY = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
+                            iMU.QuaternionZ = BitConverter.ToSingle(xorBuf, index2);
                             index2 = 10 + 76;//Start of relative velocity
                             velN = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
                             velE = BitConverter.ToSingle(xorBuf, index2); index2 += 4;

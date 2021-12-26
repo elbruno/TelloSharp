@@ -39,6 +39,10 @@
             this.btnStartSmartVideo = new System.Windows.Forms.Button();
             this.btnStopSmartVideo = new System.Windows.Forms.Button();
             this.btnHover = new System.Windows.Forms.Button();
+            this.btnLeft = new System.Windows.Forms.Button();
+            this.btnRight = new System.Windows.Forms.Button();
+            this.btnForward = new System.Windows.Forms.Button();
+            this.btnBackward = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnConnect
@@ -151,11 +155,55 @@
             this.btnHover.UseVisualStyleBackColor = true;
             this.btnHover.Click += new System.EventHandler(this.btnHover_Click);
             // 
+            // btnLeft
+            // 
+            this.btnLeft.Location = new System.Drawing.Point(342, 85);
+            this.btnLeft.Name = "btnLeft";
+            this.btnLeft.Size = new System.Drawing.Size(75, 23);
+            this.btnLeft.TabIndex = 11;
+            this.btnLeft.Text = "Left";
+            this.btnLeft.UseVisualStyleBackColor = true;
+            this.btnLeft.Click += new System.EventHandler(this.btnLeft_Click);
+            // 
+            // btnRight
+            // 
+            this.btnRight.Location = new System.Drawing.Point(423, 85);
+            this.btnRight.Name = "btnRight";
+            this.btnRight.Size = new System.Drawing.Size(75, 23);
+            this.btnRight.TabIndex = 12;
+            this.btnRight.Text = "Right";
+            this.btnRight.UseVisualStyleBackColor = true;
+            this.btnRight.Click += new System.EventHandler(this.btnRight_Click);
+            // 
+            // btnForward
+            // 
+            this.btnForward.Location = new System.Drawing.Point(377, 56);
+            this.btnForward.Name = "btnForward";
+            this.btnForward.Size = new System.Drawing.Size(75, 23);
+            this.btnForward.TabIndex = 13;
+            this.btnForward.Text = "Forward";
+            this.btnForward.UseVisualStyleBackColor = true;
+            this.btnForward.Click += new System.EventHandler(this.btnForward_Click);
+            // 
+            // btnBackward
+            // 
+            this.btnBackward.Location = new System.Drawing.Point(377, 114);
+            this.btnBackward.Name = "btnBackward";
+            this.btnBackward.Size = new System.Drawing.Size(75, 23);
+            this.btnBackward.TabIndex = 14;
+            this.btnBackward.Text = "Backward";
+            this.btnBackward.UseVisualStyleBackColor = true;
+            this.btnBackward.Click += new System.EventHandler(this.btnBackward_Click);
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.btnBackward);
+            this.Controls.Add(this.btnForward);
+            this.Controls.Add(this.btnRight);
+            this.Controls.Add(this.btnLeft);
             this.Controls.Add(this.btnHover);
             this.Controls.Add(this.btnStopSmartVideo);
             this.Controls.Add(this.btnStartSmartVideo);
@@ -187,5 +235,9 @@
         private Button btnStartSmartVideo;
         private Button btnStopSmartVideo;
         private Button btnHover;
+        private Button btnLeft;
+        private Button btnRight;
+        private Button btnForward;
+        private Button btnBackward;
     }
 }

@@ -92,7 +92,7 @@
         // Flip types...
         public enum FlipType
         {
-            FlipForward,// = iota,
+            FlipForward = 0,
             FlipLeft,
             FlipBackward,
             FlipRight,
@@ -101,9 +101,6 @@
             FlipBackwardRight,
             FlipForwardRight
         }
-
-        // SvCmd is Smart Video flight command.
-        private readonly byte SvCmd;
 
         // Smart Video flight
         public enum SmartVideoCmd
@@ -122,17 +119,6 @@
             Vbr3M,
             Vbr4M
         }
-
-
-        private const byte vmNormal = 0;
-        private const byte vmWide = 1;
-
-        // FileType is the type of file being sent to/from the drone
-        private readonly byte FileType;
-        private byte[] payloadSize;
-
-        // Known File Types...
-        private const byte FtJPEG = 1;
 
         public struct FileData
         {
@@ -207,10 +193,8 @@
             public const byte logValidPosZ = 0x40;
         }
 
-        // utility funcs for message handling
-
         // bufferToPacket takes a raw buffer of bytes and populates our packet struct
-        public Packet BufferToPacket(byte[] buff)
+        public static Packet BufferToPacket(byte[] buff)
         {
             Packet pkt = new()
             {
@@ -237,9 +221,9 @@
         }
 
         // newPacket returns a packet with some fields populated
-        internal Packet NewPacket(short pt, short cmd, short seq, int payloadSize)
+        internal static Packet NewPacket(short pt, short cmd, short seq, int payloadSize)
         {
-            Packet pkt = new Packet
+            Packet pkt = new()
             {
                 header = msgHdr,
                 toDrone = true,
@@ -254,9 +238,9 @@
             return pkt;
         }
 
-        internal byte[] NewPacketAsBytes(short pt, short cmd, short seq, int payloadSize)
+        internal static byte[] NewPacketAsBytes(short pt, short cmd, short seq, int payloadSize)
         {
-            Packet pkt = new Packet
+            Packet pkt = new()
             {
                 header = msgHdr,
                 toDrone = true,
@@ -273,7 +257,7 @@
         }
 
         // pack the packet into raw buffer format and calculate CRCs etc.
-        public byte[] PacketToBuffer(Packet pkt)
+        public static byte[] PacketToBuffer(Packet pkt)
         {
             byte[] buff;
 
@@ -311,53 +295,7 @@
             buff[10 + payloadSize] = (byte)(crc16 >> 8);
 
             return buff;
-        }
-
-        internal FlightData PayloadToFlightData(byte[] pl)
-        { 
-            FlightData fd = new FlightData();
-
-            fd.Height = (short)(pl[0] + pl[1] << 8);
-            fd.NorthSpeed = (short)(pl[2] | (pl[3]) << 8);
-            fd.EastSpeed = (short)(pl[4] | (pl[5] << 8));
-            fd.VerticalSpeed = (short)(pl[6] | (pl[7]) << 8);
-            fd.FlyTime = (short)(pl[8] | pl[9] << 8);
-
-            fd.ImuState = (pl[10] & 1) == 1;
-            fd.PressureState = (pl[10] >> 1 & 1) == 1;
-            fd.DownVisualState = (pl[10] >> 2 & 1) == 1;
-            fd.PowerState = (pl[10] >> 3 & 1) == 1;
-            fd.BatteryState = (pl[10] >> 4 & 1) == 1;
-            fd.GravityState = (pl[10] >> 5 & 1) == 1;
-            //	// what is bit 6?
-            fd.WindState = (pl[10] >> 7 & 1) == 1;
-
-            fd.ImuCalibrationState = pl[11];
-            fd.BatteryPercentage = pl[12];
-            fd.DroneFlyTimeLeft = (short)(pl[13] + pl[14] << 8);
-            fd.BatteryMilliVolts = (short)(pl[15] + pl[16] << 8);
-
-            fd.Flying = (pl[17] & 1) == 1;
-            fd.OnGround = (pl[17] >> 1 & 1) == 1;
-            fd.EmOpen = (pl[17] >> 2 & 1) == 1;
-            fd.DroneHover = (pl[17] >> 3 & 1) == 1;
-            fd.OutageRecording = (pl[17] >> 4 & 1) == 1;
-            fd.BatteryLow = (pl[17] >> 5 & 1) == 1;
-            fd.BatteryCritical = (pl[17] >> 6 & 1) == 1;
-            fd.FactoryMode = (pl[17] >> 7 & 1) == 1;
-
-            fd.FlyMode = pl[18];
-            fd.ThrowFlyTimer = pl[19];
-            fd.CameraState = pl[20];
-            fd.ElectricalMachineryState = pl[21];
-
-            fd.FrontIn = (pl[22] & 1) == 1;
-            fd.FrontOut = (pl[22] >> 1 & 1) == 1;
-            fd.FrontLSC = (pl[22] >> 2 & 1) == 1;
-            fd.ErrorState = (pl[23] & 1) == 1;
-
-            return fd;
-        }
+        }        
 
         public struct FileInfo
         {
@@ -366,9 +304,9 @@
             public short fId;
         }
 
-        public FileInfo PayloadToFileInfo(byte[] pl)
+        public static FileInfo PayloadToFileInfo(byte[] pl)
         {
-            FileInfo info = new FileInfo
+            FileInfo info = new()
             {
                 fileType = pl[0],
                 FileSize = pl[1] + pl[2] << 8 + pl[3] << 16 + pl[4] << 24,
@@ -377,14 +315,16 @@
             return info;   
         }
 
-        public FileChunk PayloadToFileChunk(byte[] pl)
+        public static FileChunk PayloadToFileChunk(byte[] pl)
         {
-            FileChunk fc = new();
-            fc.fID = (short)(pl[0] + pl[1] << 8);
-            fc.pieceNum = (uint)(pl[2] + pl[3] << 8 + pl[4] << 16 + pl[5] << 24);
-            fc.chunkNum = (uint)((pl[6] + pl[7]) << (8 + pl[8]) << (16 + pl[9]) << 24);
-            fc.chunkLen = (short)((pl[10] + pl[11]) << 8);
-            fc.chunkData = pl.Skip(12).ToArray();
+            FileChunk fc = new()
+            {
+                fID = (short)(pl[0] + pl[1] << 8),
+                pieceNum = (uint)(pl[2] + pl[3] << 8 + pl[4] << 16 + pl[5] << 24),
+                chunkNum = (uint)((pl[6] + pl[7]) << (8 + pl[8]) << (16 + pl[9]) << 24),
+                chunkLen = (short)((pl[10] + pl[11]) << 8),
+                chunkData = pl.Skip(12).ToArray()
+            };
             return fc;
         }
     }
