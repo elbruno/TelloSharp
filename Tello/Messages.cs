@@ -1,14 +1,14 @@
 ﻿namespace TelloSharp
 {
-    public class Messages
+    public partial class Messages
     {
         public const byte msgHdr = 0xcc; // 204
 
         // packet is our internal representation of the messages passed to/from the Tello
-        internal struct Packet
+        public struct Packet
         {
             public byte header;
-            public short size13;
+            public ushort size13;
             public byte crc8;
             public bool fromDrone;  // the following 4 fields are encoded in a single byte in the raw packet
             public bool toDrone;
@@ -165,58 +165,6 @@
             public byte[] chunkData;
         }
 
-        // FlightData holds our current knowledge of the drone's state.
-        // This data is not all sent at once from the drone, different fields may be updated
-        // at varying rates.
-        public class FlightData
-        {
-            public bool BatteryCritical;
-            public bool BatteryLow;
-            public short BatteryMilliVolts;
-            public short BatteryPercentage;
-            public bool BatteryState;
-            public byte CameraState;
-            public bool DownVisualState;
-            public short DroneFlyTimeLeft;
-            public bool DroneHover;
-            public short EastSpeed;
-            public byte ElectricalMachineryState;
-            public bool EmOpen;
-            public bool ErrorState;
-            public bool FactoryMode;
-            public bool Flying;
-            public byte FlyMode;
-            public short FlyTime;
-            public bool FrontIn;
-            public bool FrontLSC;
-            public bool FrontOut;
-            public bool GravityState;
-            public short GroundSpeed;
-            public short Height; // seems to be in decimetres
-            public IMUData IMU;
-            public short ImuCalibrationState;
-            public bool ImuState;
-            public ushort LightStrength;
-            public DateTime LightStrengthUpdated;
-            public ushort LowBatteryThreshold;
-            public ushort MaxHeight;
-            public MVOData MVO;
-            public short NorthSpeed;
-            public bool OnGround;
-            public bool OutageRecording;
-            public bool PowerState;
-            public bool PressureState;
-            public short SmartVideoExitMode;
-            public string SSID;
-            public byte ThrowFlyTimer;
-            public string Version;
-            public short VerticalSpeed;
-            public VBR VideoBitrate;
-            public short WifiInterference;
-            public short WifiStrength;
-            public bool WindState;
-        }
-
         // MVOData comes from the flight log messages
         public struct MVOData
         {
@@ -262,12 +210,12 @@
         // utility funcs for message handling
 
         // bufferToPacket takes a raw buffer of bytes and populates our packet struct
-        internal Packet BufferToPacket(byte[] buff)
+        public Packet BufferToPacket(byte[] buff)
         {
             Packet pkt = new()
             {
                 header = buff[0],
-                size13 = (short)((buff[1] + buff[2] << 8) >> 3),
+                size13 = (ushort)((buff[1] + (buff[2] << 8)) >> 3),
                 crc8 = buff[3],
                 fromDrone = (buff[4] & 0x80) == 1,
                 toDrone = (buff[4] & 0x40) == 1,
@@ -276,12 +224,14 @@
                 messageID = (short)(((buff[6]) << 8) | buff[5]),
                 sequence = (short)(((buff[8]) << 8) | buff[7])
             };
-            payloadSize = new byte[pkt.size13 - 11];
-            if (payloadSize.Length > 0)
-            {
-                pkt.payload = payloadSize;
-                Array.Copy(pkt.payload, buff, 9 + payloadSize.Length);
+
+            var payloadSize = pkt.size13 - 11;
+            if (payloadSize > 0)
+            {                
+                pkt.payload = new byte[payloadSize];
+                Array.Copy(buff.Skip(9).Take(payloadSize+9).ToArray(), pkt.payload, payloadSize);
             }
+
             pkt.crc16 = (short)((buff[pkt.size13 - 1]) << 8 + buff[pkt.size13 - 2]);
             return pkt;
         }
@@ -323,9 +273,9 @@
         }
 
         // pack the packet into raw buffer format and calculate CRCs etc.
-        internal byte[] PacketToBuffer(Packet pkt)
+        public byte[] PacketToBuffer(Packet pkt)
         {
-            byte[] buff = new byte[1];
+            byte[] buff;
 
             var payloadSize = pkt.payload.Length;
             var packetSize = minPktSize + payloadSize;
@@ -418,16 +368,18 @@
 
         public FileInfo PayloadToFileInfo(byte[] pl)
         {
-            FileInfo info = new FileInfo();
-            info.fileType = pl[0];
-            info.FileSize = pl[1] + pl[2] << 8 + pl[3] << 16 + pl[4] << 24;
-            info.fId = (short)(pl[5] + pl[6] << 8);
+            FileInfo info = new FileInfo
+            {
+                fileType = pl[0],
+                FileSize = pl[1] + pl[2] << 8 + pl[3] << 16 + pl[4] << 24,
+                fId = (short)(pl[5] + pl[6] << 8)
+            };
             return info;   
         }
 
         public FileChunk PayloadToFileChunk(byte[] pl)
         {
-            FileChunk fc = new FileChunk();
+            FileChunk fc = new();
             fc.fID = (short)(pl[0] + pl[1] << 8);
             fc.pieceNum = (uint)(pl[2] + pl[3] << 8 + pl[4] << 16 + pl[5] << 24);
             fc.chunkNum = (uint)((pl[6] + pl[7]) << (8 + pl[8]) << (16 + pl[9]) << 24);

@@ -3,18 +3,17 @@ using static TelloSharp.Messages;
 
 namespace TelloSharp
 {
-    public class Tello
+    public partial class Tello
     {
         private UdpUser _client;
         private FlyData _state;
         private Messages _messages;
-        public FlightData fd = new();
         private FileInternal fileTemp;
         private DateTime lastMessageTime;//for connection timeouts.
         private readonly UdpListener videoServer = new UdpListener(6040);
 
 
-        private short _wifiStrength = 0;
+        private byte _wifiStrength = 0;
         private short _controlSequence = 1;
         public bool _connected = false;
 
@@ -371,7 +370,7 @@ namespace TelloSharp
 
         public void RequestIFrame()
         {
-            byte[]? iframePacket = new byte[] { 0xcc, 0x58, 0x00, 0x7c, 0x60, 0x25, 0x00, 0x00, 0x00, 0x6c, 0x95 };
+            byte[]? iframePacket = new byte[] { 204, 0x58, 0x00, 0x7c, 0x60, 0x25, 0x00, 0x00, 0x00, 0x6c, 0x95 };
             _client.Send(iframePacket);
         }
 
@@ -439,16 +438,6 @@ namespace TelloSharp
             pkt.payload[0] = (byte)dir;
             var buffer = _messages.PacketToBuffer(pkt);
             _client.Send(buffer);
-
-
-            //                                          crc    typ  cmdL  cmdH  seqL  seqH  dirL  crc   crc
-            //byte[]? packet = new byte[] { 0xcc, 0x60, 0x00, 0x27, 0x70, 0x5c, 0x00, 0x09, 0x00, 0x00, 0x5b, 0xc5 };
-
-            //payload
-            //packet[9] = (byte)(dir & 0xff);
-            //SetPacketSequence(packet);
-            //SetPacketCRC(packet);
-            //_client.Send(packet);
         }
 
         public void SetJpgQuality(int quality)
@@ -598,28 +587,29 @@ namespace TelloSharp
             _client.Send(packet);
         }
 
-        public void SendAckLog(byte[] id)
+        public void SendAckLogHeader(byte[] id)
         {
             var pkt = _messages.NewPacket(PacketType.ptData1, MessageTypes.msgLogHeader, _controlSequence++, 3);
             pkt.payload[1] = id[0];
             pkt.payload[2] = id[1];
             _client.Send(_messages.PacketToBuffer(pkt));
+        }
 
+        public void SendAckLogHeader(short cmd, ushort id)
+        {
             //                                          crc    typ  cmdL  cmdH  seqL  seqH  unk   idL   idH   crc   crc
-            //byte[]? packet = new byte[] { 0xcc, 0x70, 0x00, 0x27, 0x50, 0x50, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
+            var packet = new byte[] { 0xcc, 0x70, 0x00, 0x27, 0x50, 0x50, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b, 0xc5 };
 
-            //byte[]? ba = BitConverter.GetBytes(cmd);
-            //packet[5] = ba[0];
-            //packet[6] = ba[1];
+            var ba = BitConverter.GetBytes(cmd);
+            packet[5] = ba[0];
+            packet[6] = ba[1];
 
-            //ba = BitConverter.GetBytes(id);
-            //packet[10] = ba[0];
-            //packet[11] = ba[1];
-
-            //SetPacketSequence(packet);
-            //SetPacketCRC(packet);
-
-            //_client.Send(packet);
+            ba = BitConverter.GetBytes(id);
+            packet[10] = ba[0];
+            packet[11] = ba[1];
+            SetPacketSequence(packet);
+            SetPacketCRC(packet);
+            _client.Send(packet);
         }
 
         //this might not be working right 
@@ -640,13 +630,7 @@ namespace TelloSharp
             packet[13] = ((byte)(n2 >> 8 & 0xFF));
             packet[14] = ((byte)(n2 >> 16 & 0xFF));
             packet[15] = ((byte)(n2 >> 24 & 0xFF));
-
-            //ba = BitConverter.GetBytes(n2);
-            //packet[12] = ba[0];
-            //packet[13] = ba[1];
-            //packet[14] = ba[2];
-            //packet[15] = ba[3];
-
+                     
             SetPacketSequence(packet);
             SetPacketCRC(packet);
 
@@ -703,20 +687,18 @@ namespace TelloSharp
             _client.Send(connectPacket);
         }
 
-        //Pause connections. Used by aTello when app paused.
         public void ConnectionSetPause(bool bPause)
         {
-            //NOTE only pause if connected and only unpause (connect) when paused.
             if (bPause && _connectionState == ConnectionState.Connected)
             {
                 _connectionState = ConnectionState.Paused;
                 OnConnection?.Invoke(this, _connectionState);
             }
             else if (bPause == false && _connectionState == ConnectionState.Paused)
-            {
-                //NOTE:send unpause and not connection event
+            {         
                 OnConnection?.Invoke(this, ConnectionState.UnPausing);
                 _connectionState = ConnectionState.Connected;
+                OnConnection?.Invoke(this, ConnectionState.Connected);
             }
         }
 
@@ -733,8 +715,6 @@ namespace TelloSharp
         {
             _cancelTokens = new CancellationTokenSource();
             CancellationToken token = _cancelTokens.Token;
-            _state = new FlyData(this);
-
 
             Task.Factory.StartNew(async () =>
             {
@@ -759,13 +739,17 @@ namespace TelloSharp
                                 OnConnection?.Invoke(this, _connectionState);
 
                                 StartHeartbeat();
-                                RequestIFrame();
+                                
                                 Console.WriteLine("Tello Connected!");
                                 continue;
                             }
                         }
 
                         var pkt = _messages.BufferToPacket(received.bytes);
+                        int cmdId = received.bytes[5] | (received.bytes[6] << 8);
+
+                        var b = received.bytes.Skip(9).ToArray();
+                        var pl = pkt.payload;
 
                         switch (pkt.messageID)
                         {
@@ -824,81 +808,45 @@ namespace TelloSharp
                                         OnUpdate?.Invoke(this, new TelloStateEventArgs(State, 100));
 
                                         Console.WriteLine("\nDONE PN:" + pieceNum + " max: " + maxPieceNum);
-
-                                        //Save raw data minus sequence.
-                                        using (FileStream? stream = new FileStream(picFilePath, FileMode.Append))
-                                        {
-                                            stream.Write(picbuffer, 0, (int)picBytesExpected);
-                                        }
+                                                                                
+                                        using FileStream? stream = new(picFilePath, FileMode.Append);
+                                        stream.Write(picbuffer, 0, (int)picBytesExpected);
                                     }
                                 }
                                 else
                                 {
-                                    picExtraPackets++;//for debugging.
+                                    picExtraPackets++;
                                 }
                                 break;
                             case MessageTypes.msgFlightStatus:
-                                var tmpFd = _messages.PayloadToFlightData(pkt.payload);
-                                // not all fields are sent...
-                                fd.BatteryCritical = tmpFd.BatteryCritical;
-                                fd.BatteryLow = tmpFd.BatteryLow;
-                                fd.BatteryMilliVolts = tmpFd.BatteryMilliVolts;
-                                fd.BatteryPercentage = tmpFd.BatteryPercentage;
-                                fd.BatteryState = tmpFd.BatteryState;
-                                fd.CameraState = tmpFd.CameraState;
-                                fd.DownVisualState = tmpFd.DownVisualState;
-                                fd.DroneFlyTimeLeft = tmpFd.DroneFlyTimeLeft;
-                                fd.DroneHover = tmpFd.DroneHover;
-                                fd.EastSpeed = tmpFd.EastSpeed;
-                                fd.ElectricalMachineryState = tmpFd.ElectricalMachineryState;
-                                fd.EmOpen = tmpFd.EmOpen;
-                                fd.ErrorState = tmpFd.ErrorState;
-                                fd.FactoryMode = tmpFd.FactoryMode;
-                                fd.Flying = tmpFd.Flying;
-                                fd.FlyMode = tmpFd.FlyMode;
-                                fd.FlyTime = tmpFd.FlyTime;
-                                fd.FrontIn = tmpFd.FrontIn;
-                                fd.FrontLSC = tmpFd.FrontLSC;
-                                fd.FrontOut = tmpFd.FrontOut;
-                                fd.GravityState = tmpFd.GravityState;
-                                fd.Height = tmpFd.Height;
-                                fd.ImuCalibrationState = tmpFd.ImuCalibrationState;
-                                fd.ImuState = tmpFd.ImuState;
-                                fd.NorthSpeed = tmpFd.NorthSpeed;
-                                fd.OnGround = tmpFd.OnGround;
-                                fd.OutageRecording = tmpFd.OutageRecording;
-                                fd.PowerState = tmpFd.PowerState;
-                                fd.PressureState = tmpFd.PressureState;
-                                fd.ThrowFlyTimer = tmpFd.ThrowFlyTimer;
-                                fd.VerticalSpeed = (short)-tmpFd.VerticalSpeed; // seems to be inverted
-                                fd.WindState = tmpFd.WindState;
+                                _state.Set(received.bytes.Skip(9).ToArray());
                                 break;
                             case MessageTypes.msgLightStrength:
-                                fd.LightStrength = pkt.payload[0];
-                                fd.LightStrengthUpdated = DateTime.Now;
+                                _state.LightStrength = pkt.payload[0];
+                                _state.LightStrengthUpdated = DateTime.Now;
                                 break;
                             case MessageTypes.msgLogConfig:
                                 break;
-                            case MessageTypes.msgLogHeader:
-                                SendAckLog(pkt.payload.Take(2).ToArray());
+                            case MessageTypes.msgLogHeader:                                
+                                SendAckLogHeader(MessageTypes.msgLogHeader, BitConverter.ToUInt16(received.bytes, 9));
                                 break;
                             case MessageTypes.msgLogData:
-                                ParseLogPacket(pkt.payload);
+                                _state.ParseLog(received.bytes.Skip(10).ToArray());                                
                                 break;
                             case MessageTypes.msgQueryHeightLimit:
-                                fd.MaxHeight = pkt.payload[1];
+                                _state.MaxHeight = pkt.payload[1];
                                 break;
                             case MessageTypes.msgQueryLowBattThresh:
-                                fd.LowBatteryThreshold = pkt.payload[1];
+                                _state.LowBatteryThreshold = pkt.payload[1];
                                 break;
                             case MessageTypes.msgQuerySSID:
-                                fd.SSID = pkt.payload.Skip(2).ToString();
+                                _state.SSID = Encoding.ASCII.GetString(pkt.payload.Skip(2).ToArray());
                                 break;
                             case MessageTypes.msgQueryVersion:
-                                fd.Version = pkt.payload.Skip(1).ToString();
+                                _state.Version = Encoding.ASCII.GetString(pkt.payload.Skip(1).ToArray());
                                 break;
                             case MessageTypes.msgQueryVideoBitrate:
-                                fd.VideoBitrate = (VBR)pkt.payload[0];
+                                _state.VideoBitrate = (VBR)pkt.payload[0];
                                 break;
                             case MessageTypes.msgSetDateTime:
                                 SendDateTime();
@@ -910,7 +858,8 @@ namespace TelloSharp
                             case MessageTypes.msgSwitchPicVideo:
                                 break;
                             case MessageTypes.msgWifiStrength:
-                                fd.WifiStrength = pkt.payload[0];
+                                _state.WifiStrength = pkt.payload[0];
+                                _state.WifiInterference = pkt.payload[1];
                                 break;
                             default:
                                 break;
@@ -958,6 +907,7 @@ namespace TelloSharp
         private void ParseLogPacket(byte[] data)
         {
             var pos = 1;
+            if (data == null) return;
 
             if (data.Length < 2)
             {
@@ -966,7 +916,7 @@ namespace TelloSharp
 
             for (int i = 0; i < data.Length - 6; i++)
             {
-                if (data[pos] != logRecordSeparator)
+                if (data[pos] != (byte)logRecordSeparator)
                 {
                     break;
                 }
@@ -981,6 +931,7 @@ namespace TelloSharp
             switch (logRecType)
             {
                 case (int)LogRecTypes.logRecNewMVO:
+                    
                     for (var i = 0; i < recLen && pos + i < data.Length; i++)
                     {
                         xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
@@ -991,43 +942,42 @@ namespace TelloSharp
 
                     if ((flags & LogValidVe.logValidVelX) != 0)
                     {
-                        fd.MVO.VelocityX = (short)(xorBuf[offset + 2] + xorBuf[offset + 3] << 8);
+                        _state.MVO.VelocityX = (short)(xorBuf[offset + 2] + xorBuf[offset + 3] << 8);
                     }
 
                     if ((flags & LogValidVe.logValidVelY) != 0)
                     {
-                        fd.MVO.VelocityY = (short)(xorBuf[offset + 4] + xorBuf[offset + 5] << 8);
+                        _state.MVO.VelocityY = (short)(xorBuf[offset + 4] + xorBuf[offset + 5] << 8);
                     }
 
                     if ((flags & LogValidVe.logValidVelZ) != 0)
                     {
-                        fd.MVO.VelocityZ = (short)(-xorBuf[offset + 6] + xorBuf[offset + 7] << 8);
+                        _state.MVO.VelocityZ = (short)(-xorBuf[offset + 6] + xorBuf[offset + 7] << 8);
                     }
 
                     if ((flags & LogValidVe.logValidPosY) != 0 && (flags & LogValidVe.logValidPosX) != 0 && (flags & LogValidVe.logValidPosZ) != 0)
                     {
-                        fd.MVO.PositionY = BitConverter.ToSingle(xorBuf.Skip(offset + 8).Take(offset + 13).ToArray());
-                        fd.MVO.PositionX = BitConverter.ToSingle(xorBuf.Skip(offset + 12).Take(offset + 17).ToArray());
-                        fd.MVO.PositionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 16).Take(offset + 21).ToArray());
+                        _state.MVO.PositionY = BitConverter.ToSingle(xorBuf.Skip(offset + 8).Take(offset + 13).ToArray());
+                        _state.MVO.PositionX = BitConverter.ToSingle(xorBuf.Skip(offset + 12).Take(offset + 17).ToArray());
+                        _state.MVO.PositionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 16).Take(offset + 21).ToArray());
                     }
                     break;
 
                 case (int)LogRecTypes.logRecIMU:
-
+                    xorBuf = new byte[data.Length];
                     for (var i = 0; i < recLen && pos + i < data.Length; i++)
                     {
                         xorBuf[i] = (byte)(data[pos + i] ^ xorVal);
                     }
                     offset = 10;
 
-                    fd.IMU.QuaternionW = BitConverter.ToSingle(xorBuf.Skip(offset + 48).Take(offset + 53).ToArray());
-                    fd.IMU.QuaternionX = BitConverter.ToSingle(xorBuf.Skip(offset + 52).Take(offset + 57).ToArray());
-                    fd.IMU.QuaternionY = BitConverter.ToSingle(xorBuf.Skip(offset + 56).Take(offset + 61).ToArray());
-                    fd.IMU.QuaternionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 60).Take(offset + 65).ToArray());
-                    fd.IMU.Temperature = (short)(xorBuf[offset + 106] + xorBuf[offset + 107] << 8 / 100);
+                    _state.IMU.QuaternionW = BitConverter.ToSingle(xorBuf.Skip(offset + 48).Take(offset + 53).ToArray());
+                    _state.IMU.QuaternionX = BitConverter.ToSingle(xorBuf.Skip(offset + 52).Take(offset + 57).ToArray());
+                    _state.IMU.QuaternionY = BitConverter.ToSingle(xorBuf.Skip(offset + 56).Take(offset + 61).ToArray());
+                    _state.IMU.QuaternionZ = BitConverter.ToSingle(xorBuf.Skip(offset + 60).Take(offset + 65).ToArray());
+                    _state.IMU.Temperature = (short)((short)(xorBuf[offset + 106] + xorBuf[offset + 107] << 8) / 100);
 
-                    fd.IMU.Yaw = QuatToYawDeg(fd.IMU.QuaternionX, fd.IMU.QuaternionY, fd.IMU.QuaternionZ, fd.IMU.QuaternionW);
-                    pos += recLen;
+                    _state.IMU.Yaw = QuatToYawDeg(_state.IMU.QuaternionX, _state.IMU.QuaternionY, _state.IMU.QuaternionZ, _state.IMU.QuaternionW);
                     break;
                 default:
                     break;
@@ -1049,8 +999,7 @@ namespace TelloSharp
             var sinY = 2.0 * (qqW * qqZ + qqX * qqY);
             var cosY = 1.0 - 2 * (sqY + sqZ);
 
-            var yaw = (short)(Math.Round(Math.Atan2(sinY, cosY) / degree));
-
+            var yaw = (short)Math.Round(Math.Atan2(sinY, cosY) / degree);
             return yaw;
         }
 
@@ -1083,12 +1032,11 @@ namespace TelloSharp
                         if (_connectionState == ConnectionState.Connected)
                         {
                             SendControllerUpdate();
-
-                            tick++;
-                            if ((tick % iFrameRate) == 0)
-                            {
-                                RequestIFrame();
-                            }
+                            //tick++;
+                            //if ((tick % iFrameRate) == 0)
+                            //{
+                            //    RequestIFrame();
+                            //}
                         }
                         Thread.Sleep(40);
                     }
@@ -1152,30 +1100,8 @@ namespace TelloSharp
               });
         }
 
-        public class ControllerState
-        {
-            public float Rx { get; set; }
-            public float Ry { get; set; }
-            public float Lx { get; set; }
-            public float Ly { get; set; }
-            public int Speed { get; set; }
-            public double DeadBand { get; set; } = 0.15D;
-
-            public void SetAxis(float lx, float ly, float rx, float ry)
-            {
-                Rx = rx;
-                Ry = ry;
-                Lx = lx;
-                Ly = ly;
-            }
-            public void SetSpeedMode(int mode)
-            {
-                Speed = mode;
-            }
-        }
-
-        public ControllerState _controllerState = new ControllerState();
-        public ControllerState _autoPilotControllerState = new ControllerState();
+        public ControllerState _controllerState = new();
+        public ControllerState _autoPilotControllerState = new();
         private bool ctrlBouncing;
         private bool ctrlSportsMode;
         private short ctrlRx;
@@ -1272,341 +1198,6 @@ namespace TelloSharp
             Crc.CalcCrc(packet, packet.Length);
 
             return packet;
-        }
-
-        public class FlyData
-        {
-            private int flyMode;
-            private int height;
-            private int verticalSpeed;
-            private int flySpeed;
-            private int eastSpeed;
-            private int northSpeed;
-            private int flyTime;
-            private bool flying;
-
-            private bool downVisualState;
-            private bool droneHover;
-            private bool eMOpen;
-            private bool onGround;
-            private bool pressureState;
-
-            private bool batteryCritical;
-            private int batteryPercentage;
-            private bool batteryLow;
-            private bool batteryLower;
-            private bool batteryState;
-            private bool powerState;
-            private int droneBatteryLeft;
-            private int droneFlyTimeLeft;
-
-            private int cameraState;
-            private int electricalMachineryState;
-            private bool factoryMode;
-            private bool frontIn;
-            private bool frontLSC;
-            private bool frontOut;
-            private bool gravityState;
-            private int imuCalibrationState;
-            private bool imuState;
-            private int lightStrength;
-            private bool outageRecording;
-            private int smartVideoExitMode;
-            private int temperatureHeight;
-            private int throwFlyTimer;
-            private int wifiDisturb;
-            private int wifiStrength;
-            private bool windState;
-
-            private float velX;
-            private float velY;
-            private float velZ;
-
-            private float posX;
-            private float posY;
-            private float posZ;
-            private float posUncertainty;
-
-            private float velN;
-            private float velE;
-            public float velD;
-
-            private float quatX;
-            private float quatY;
-            private float quatZ;
-            private float quatW;
-
-            private readonly Tello tello;
-
-            public int FlyMode { get => flyMode; set => flyMode = value; }
-            public int Height { get => height; set => height = value; }
-            public int VerticalSpeed { get => verticalSpeed; set => verticalSpeed = value; }
-            public int FlySpeed { get => flySpeed; set => flySpeed = value; }
-            public int EastSpeed { get => eastSpeed; set => eastSpeed = value; }
-            public int NorthSpeed { get => northSpeed; set => northSpeed = value; }
-            public int FlyTime { get => flyTime; set => flyTime = value; }
-            public bool Flying { get => flying; set => flying = value; }
-            public bool DownVisualState { get => downVisualState; set => downVisualState = value; }
-            public bool DroneHover { get => droneHover; set => droneHover = value; }
-            public bool EMOpen { get => eMOpen; set => eMOpen = value; }
-            public bool OnGround { get => onGround; set => onGround = value; }
-            public bool PressureState { get => pressureState; set => pressureState = value; }
-            public int BatteryPercentage { get => batteryPercentage; set => batteryPercentage = value; }
-            public bool BatteryLow { get => batteryLow; set => batteryLow = value; }
-            public bool BatteryLower { get => batteryLower; set => batteryLower = value; }
-            public bool BatteryState { get => batteryState; set => batteryState = value; }
-            public bool PowerState { get => powerState; set => powerState = value; }
-            public int DroneBatteryLeft { get => droneBatteryLeft; set => droneBatteryLeft = value; }
-            public int DroneFlyTimeLeft { get => droneFlyTimeLeft; set => droneFlyTimeLeft = value; }
-            public int CameraState { get => cameraState; set => cameraState = value; }
-            public int ElectricalMachineryState { get => electricalMachineryState; set => electricalMachineryState = value; }
-            public bool FactoryMode { get => factoryMode; set => factoryMode = value; }
-            public bool FrontIn { get => frontIn; set => frontIn = value; }
-            public bool FrontLSC { get => frontLSC; set => frontLSC = value; }
-            public bool FrontOut { get => frontOut; set => frontOut = value; }
-            public bool GravityState { get => gravityState; set => gravityState = value; }
-            public int ImuCalibrationState { get => imuCalibrationState; set => imuCalibrationState = value; }
-            public bool ImuState { get => imuState; set => imuState = value; }
-            public int LightStrength { get => lightStrength; set => lightStrength = value; }
-            public bool OutageRecording { get => outageRecording; set => outageRecording = value; }
-            public int SmartVideoExitMode { get => smartVideoExitMode; set => smartVideoExitMode = value; }
-            public int TemperatureHeight { get => temperatureHeight; set => temperatureHeight = value; }
-            public int ThrowFlyTimer { get => throwFlyTimer; set => throwFlyTimer = value; }
-            public int WifiDisturb { get => wifiDisturb; set => wifiDisturb = value; }
-            public int WifiStrength { get => wifiStrength; set => wifiStrength = value; }
-            public bool WindState { get => windState; set => windState = value; }
-            public float VelX { get => velX; set => velX = value; }
-            public float VelY { get => velY; set => velY = value; }
-            public float VelZ { get => velZ; set => velZ = value; }
-            public float PosX { get => posX; set => posX = value; }
-            public float PosY { get => posY; set => posY = value; }
-            public float PosZ { get => posZ; set => posZ = value; }
-            public float PosUncertainty { get => posUncertainty; set => posUncertainty = value; }
-            public float VelN { get => velN; set => velN = value; }
-            public float VelE { get => velE; set => velE = value; }
-            public float QuatX { get => quatX; set => quatX = value; }
-            public float QuatY { get => quatY; set => quatY = value; }
-            public float QuatZ { get => quatZ; set => quatZ = value; }
-            public float QuatW { get => quatW; set => quatW = value; }
-            public bool BatteryCritical { get => batteryCritical; set => batteryCritical = value; }
-
-            public FlyData(Tello tello)
-            {
-                this.tello = tello;
-            }
-
-            public void Set(byte[] data)
-            {
-                int index = 0;
-                height = (short)(data[index] | (data[index + 1] << 8)); index += 2;
-                northSpeed = (short)(data[index] | (data[index + 1] << 8)); index += 2;
-                eastSpeed = (short)(data[index] | (data[index + 1] << 8)); index += 2;
-                FlySpeed = ((int)Math.Sqrt(Math.Pow(northSpeed, 2.0D) + Math.Pow(eastSpeed, 2.0D)));
-                verticalSpeed = (short)(data[index] | (data[index + 1] << 8)); index += 2;
-                flyTime = data[index] | (data[index + 1] << 8); index += 2;
-
-                imuState = (data[index] >> 0 & 0x1) == 1 ? true : false;
-                pressureState = (data[index] >> 1 & 0x1) == 1 ? true : false;
-                downVisualState = (data[index] >> 2 & 0x1) == 1 ? true : false;
-                powerState = (data[index] >> 3 & 0x1) == 1 ? true : false;
-                batteryState = (data[index] >> 4 & 0x1) == 1 ? true : false;
-                gravityState = (data[index] >> 5 & 0x1) == 1 ? true : false;
-                windState = (data[index] >> 7 & 0x1) == 1 ? true : false;
-                index += 1;
-
-                imuCalibrationState = data[index]; index += 1;
-                batteryPercentage = data[index]; index += 1;
-                droneFlyTimeLeft = data[index] | (data[index + 1] << 8); index += 2;
-                droneBatteryLeft = data[index] | (data[index + 1] << 8); index += 2;
-
-                //index 17
-                flying = (data[index] >> 0 & 0x1) == 1 ? true : false;
-                onGround = (data[index] >> 1 & 0x1) == 1 ? true : false;
-                eMOpen = (data[index] >> 2 & 0x1) == 1 ? true : false;
-                droneHover = (data[index] >> 3 & 0x1) == 1 ? true : false;
-                outageRecording = (data[index] >> 4 & 0x1) == 1 ? true : false;
-                batteryLow = (data[index] >> 5 & 0x1) == 1 ? true : false;
-                batteryLower = (data[index] >> 6 & 0x1) == 1 ? true : false;
-                factoryMode = (data[index] >> 7 & 0x1) == 1 ? true : false;
-                index += 1;
-
-                FlyMode = data[index]; index += 1;
-                throwFlyTimer = data[index]; index += 1;
-                cameraState = data[index]; index += 1;
-
-                electricalMachineryState = data[index]; index += 1;
-
-                frontIn = (data[index] >> 0 & 0x1) == 1 ? true : false;//22
-                frontOut = (data[index] >> 1 & 0x1) == 1 ? true : false;
-                frontLSC = (data[index] >> 2 & 0x1) == 1 ? true : false;
-                index += 1;
-                temperatureHeight = (data[index] >> 0 & 0x1);//23            
-                wifiStrength = tello._wifiStrength;//Wifi str comes in a cmd.
-            }
-
-            public void ParseLog(byte[] data)
-            {
-                int pos = 0;
-
-                while (pos < data.Length - 2)//-2 for CRC bytes at end of packet.
-                {
-                    if (data[pos] != 'U')
-                    {
-                        break;
-                    }
-                    byte len = data[pos + 1];
-                    if (data[pos + 2] != 0)
-                    {
-                        break;
-                    }
-
-                    ushort id = BitConverter.ToUInt16(data, pos + 4);
-                    byte[]? xorBuf = new byte[256];
-                    byte xorValue = data[pos + 6];
-                    switch (id)
-                    {
-                        case 0x1d:
-                            for (int i = 0; i < len; i++)
-                            {
-                                xorBuf[i] = (byte)(data[pos + i] ^ xorValue);
-                            }
-
-                            int index = 10;
-                            velX = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            velY = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            velZ = BitConverter.ToInt16(xorBuf, index); index += 2;
-                            posX = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posY = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posZ = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posUncertainty = BitConverter.ToSingle(xorBuf, index) * 10000.0f; index += 4;
-                            break;
-                        case 0x0800://2048 imu
-                            for (int i = 0; i < len; i++)
-                            {
-                                xorBuf[i] = (byte)(data[pos + i] ^ xorValue);
-                            }
-
-                            int index2 = 10 + 48;//44 is the start of the quat data.
-                            quatW = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatX = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatY = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            quatZ = BitConverter.ToSingle(xorBuf, index2);
-                            index2 = 10 + 76;//Start of relative velocity
-                            velN = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            velE = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
-                            velD = BitConverter.ToSingle(xorBuf, index2);
-                            break;
-
-                    }
-                    pos += len;
-                }
-            }
-
-            public double[] ToEuler()
-            {
-                float qX = quatX;
-                float qY = quatY;
-                float qZ = quatZ;
-                float qW = quatW;
-
-                double sqW = qW * qW;
-                double sqX = qX * qX;
-                double sqY = qY * qY;
-                double sqZ = qZ * qZ;
-                double yaw = 0.0;
-                double roll = 0.0;
-                double pitch = 0.0;
-                double[] retv = new double[3];
-                double unit = sqX + sqY + sqZ + sqW; // if normalised is one, otherwise
-                                                     // is correction factor
-                double test = qW * qX + qY * qZ;
-                if (test > 0.499 * unit)
-                {
-                    // singularity at north pole
-                    yaw = 2 * Math.Atan2(qY, qW);
-                    pitch = Math.PI / 2;
-                    roll = 0;
-                }
-                else if (test < -0.499 * unit)
-                {
-                    // singularity at south pole
-                    yaw = -2 * Math.Atan2(qY, qW);
-                    pitch = -Math.PI / 2;
-                    roll = 0;
-                }
-                else
-                {
-                    yaw = Math.Atan2(2.0 * (qW * qZ - qX * qY), 1.0 - 2.0 * (sqZ + sqX));
-                    roll = Math.Asin(2.0 * test / unit);
-                    pitch = Math.Atan2(2.0 * (qW * qY - qX * qZ), 1.0 - 2.0 * (sqY + sqX));
-                }
-
-                retv[0] = pitch;
-                retv[1] = roll;
-                retv[2] = yaw;
-                return retv;
-            }
-
-            public string GetLogHeader()
-            {
-                StringBuilder sb = new StringBuilder();
-                foreach (System.Reflection.FieldInfo property in GetType().GetFields())
-                {
-                    sb.Append(property.Name);
-                    sb.Append(",");
-                }
-                sb.AppendLine();
-                return sb.ToString();
-            }
-
-            public string GetLogLine()
-            {
-                StringBuilder sb = new StringBuilder();
-                foreach (System.Reflection.FieldInfo property in GetType().GetFields())
-                {
-                    if (property.FieldType == typeof(bool))
-                    {
-                        if (!(bool)property.GetValue(this))
-                        {
-                            sb.Append("0");
-                        }
-                        else
-                        {
-                            sb.Append("1");
-                        }
-                    }
-                    else
-                    {
-                        sb.Append(property.GetValue(this));
-                    }
-
-                    sb.Append(",");
-                }
-                sb.AppendLine();
-                return sb.ToString();
-            }
-
-            public override string ToString()
-            {
-                StringBuilder sb = new();
-                int count = 0;
-                foreach (System.Reflection.PropertyInfo property in GetType().GetProperties())
-                {
-                    sb.Append(property.Name);
-                    sb.Append(": ");
-                    sb.Append(property.GetValue(this));
-                    if (count++ % 2 == 1)
-                    {
-                        sb.Append(Environment.NewLine);
-                    }
-                    else
-                    {
-                        sb.Append("      ");
-                    }
-                }
-
-                return sb.ToString();
-            }
         }
     }
 }

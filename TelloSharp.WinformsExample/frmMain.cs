@@ -68,7 +68,7 @@ namespace TelloSharp.WinformsExample
 
         private void btnFlip_Click(object sender, EventArgs e)
         {
-            tello.DoFlip(FlipType.FlipLeft);
+            tello.Flip(FlipType.FlipLeft);
         }
 
         private void btnStartSmartVideo_Click(object sender, EventArgs e)

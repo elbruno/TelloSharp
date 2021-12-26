@@ -10,9 +10,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.Example", "TelloSharp.Example\TelloSharp.Example.csproj", "{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp.Example", "TelloSharp.Example\TelloSharp.Example.csproj", "{271CE7ED-6AF3-49CE-A672-98CDCA3CB22C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.WinformsExample", "TelloSharp.WinformsExample\TelloSharp.WinformsExample.csproj", "{801FF204-9BA4-4633-A320-090F726F5315}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp.WinformsExample", "TelloSharp.WinformsExample\TelloSharp.WinformsExample.csproj", "{801FF204-9BA4-4633-A320-090F726F5315}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.Test", "TelloSharp.Test\TelloSharp.Test.csproj", "{E8BDA127-19EE-468F-AD54-16C3FF926F89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +34,10 @@ Global
 		{801FF204-9BA4-4633-A320-090F726F5315}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{801FF204-9BA4-4633-A320-090F726F5315}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{801FF204-9BA4-4633-A320-090F726F5315}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8BDA127-19EE-468F-AD54-16C3FF926F89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8BDA127-19EE-468F-AD54-16C3FF926F89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8BDA127-19EE-468F-AD54-16C3FF926F89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8BDA127-19EE-468F-AD54-16C3FF926F89}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
