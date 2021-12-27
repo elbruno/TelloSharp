@@ -121,6 +121,8 @@ namespace TelloSharp
             public float QuatY { get => IMU.QuaternionY; set => iMU.QuaternionY = value; }
             public float QuatZ { get => IMU.QuaternionZ; set => iMU.QuaternionZ = value; }
             public float QuatW { get => IMU.QuaternionW; set => iMU.QuaternionW = value; }
+            public short Yaw { get => IMU.Yaw; set => iMU.Yaw = value; }
+
             public bool BatteryCritical { get => batteryCritical; set => batteryCritical = value; }
             public byte MaxHeight { get; internal set; }
             public byte LowBatteryThreshold { get; internal set; }
@@ -187,7 +189,7 @@ namespace TelloSharp
                 frontLSC = (data[index] >> 2 & 0x1) == 1;
                 index += 1;
                 temperatureHeight = (data[index] >> 0 & 0x1);//23            
-                wifiStrength = tello._wifiStrength;                
+                wifiStrength = tello._wifiStrength;
             }
 
             public void ParseLog(byte[] data)
@@ -224,7 +226,7 @@ namespace TelloSharp
                             mVO.PositionX = BitConverter.ToSingle(xorBuf, index); index += 4;
                             mVO.PositionY = BitConverter.ToSingle(xorBuf, index); index += 4;
                             mVO.PositionZ = BitConverter.ToSingle(xorBuf, index); index += 4;
-                            posUncertainty = BitConverter.ToSingle(xorBuf, index) * 10000.0f;                             
+                            posUncertainty = BitConverter.ToSingle(xorBuf, index) * 10000.0f;
                             break;
                         case (ushort)LogRecTypes.logRecIMU:
                             for (int i = 0; i < len; i++)
@@ -241,6 +243,7 @@ namespace TelloSharp
                             velN = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
                             velE = BitConverter.ToSingle(xorBuf, index2); index2 += 4;
                             velD = BitConverter.ToSingle(xorBuf, index2);
+                            iMU.Yaw = QuatToYawDeg(iMU.QuaternionX,iMU.QuaternionY,iMU.QuaternionZ,iMU.QuaternionW);
                             break;
 
                     }
@@ -248,7 +251,53 @@ namespace TelloSharp
                 }
             }
 
-            public double[] ToEuler()
+            private int QuatToEulerDeg(float qX, float qY, float qZ, float qW)
+            {
+                const float degree = (float)(MathF.PI / 180.0);
+
+                var qqX = qX;
+                var qqY = qY;
+                var qqZ = qZ;
+                var qqW = qW;
+                var sqX = qqX * qqX;
+                var sqY = qqY * qqY;
+                var sqZ = qqZ * qqZ;
+                var sinR = 2.0 * (qqW * qqX + qqY * qqZ);
+                var cosR = 1 - 2 * (sqX + sqY);
+                var roll = (int)(Math.Round(Math.Atan2(sinR, cosR) / degree));
+                var sinP = 2.0 * (qqW * qqY - qqZ * qqX);
+                if (sinP > 1.0) {
+                    sinP = 1.0;
+                }
+                if (sinP < -1.0) {
+                    sinP = -1;
+                }
+                var pitch = (int)(Math.Round(Math.Asin(sinP) / degree));
+
+                var sinY = 2.0 * (qqW * qqZ + qqX * qqY);
+                var cosY = 1.0 - 2 * (sqY + sqZ);
+                var yaw = (int)(Math.Round(Math.Atan2(sinY, cosY) / degree));
+
+                return yaw;
+            }
+
+            private short QuatToYawDeg(float qX, float qY, float qZ, float qW)
+            {
+                const float degree = (float)(MathF.PI / 180.0);
+
+                var qqX = qX;
+                var qqY = qY;
+                var qqZ = qZ;
+                var qqW = qW;
+                var sqY = qqY * qqY;
+                var sqZ = qqZ * qqZ;
+                var sinY = 2.0 * (qqW * qqZ + qqX * qqY);
+                var cosY = 1.0 - 2 * (sqY + sqZ);
+                var yaw = (short)(Math.Round(Math.Atan2(sinY, cosY) / degree));
+                return yaw;
+            }
+
+        public double[] ToEuler()
             {
                 float qX = quatX;
                 float qY = quatY;
