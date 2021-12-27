@@ -4,7 +4,11 @@ namespace TelloSharp.WinformsExample
 {
     public partial class frmMain : Form
     {
-        Tello tello;
+        readonly Tello tello;
+        private CameraModule cameraModule = new();
+        private int _pError;
+        private bool _processingCommand = false;
+        private bool _connected = false;
 
         public frmMain()
         {
@@ -33,7 +37,7 @@ namespace TelloSharp.WinformsExample
 
         private void Tello_OnConnection(object? sender, Tello.ConnectionState e)
         {
-            
+            lblConState.Text = e.ToString();
         }
 
         private void btnTakeOff_Click(object sender, EventArgs e)
@@ -104,6 +108,104 @@ namespace TelloSharp.WinformsExample
         private void btnBackward_Click(object sender, EventArgs e)
         {
             tello.Backward(20);
+        }
+
+        private void btnUp_Click(object sender, EventArgs e)
+        {
+            tello.Up(20);
+        }
+
+        private void btnDown_Click(object sender, EventArgs e)
+        {
+            tello.Down(20);
+        }
+
+        private void btnCw_Click(object sender, EventArgs e)
+        {
+            tello.ClockWise(20);
+        }
+
+        private void btnCcw_Click(object sender, EventArgs e)
+        {
+            tello.AntiClockWise(20);
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            tello.SendCommand("command");
+            tello.SendCommand("streamon");
+
+            cameraModule.NewCoordInfo += CameraModule_NewCoordInfo;
+            cameraModule.Init();
+
+            Task.Run(() => cameraModule.FindPerson(pictureBoxIpl1));
+
+        }
+
+        private void CameraModule_NewCoordInfo(object? sender, CoordinatesEventArgs e)
+        {
+            if (_connected && !_processingCommand)
+            {
+                _processingCommand = true;
+
+                var areaTop = 6200;
+                var areaBottom = 6800;
+
+                Pid pid = new();
+
+                short forwardBack = 0;
+                var error = e.Location.X - pictureBoxIpl1.Width/2;
+                short speed = (short)(pid.P * error + pid.I * (error - _pError));
+
+                if (speed > 100) speed = 100;
+                if (speed < -100) speed = -100;
+
+                if (e.Location.X == 0)
+                {
+                    speed = 0;
+                    error = 0;
+                    tello.Hover();
+                    _processingCommand = false;
+                    return;
+                }
+
+                _pError = error; 
+
+                if (e.Area > areaTop && e.Area < areaBottom)
+                {
+                    forwardBack = 0;
+                    tello.Hover();
+                }
+                else if (e.Area > areaBottom)
+                {
+                    forwardBack = -20;
+                }
+                else if (e.Area < areaTop && e.Area != 0)
+                {
+                    forwardBack = 20;
+                }
+
+                Task.Run(() => Console.WriteLine($"Speed {speed} | ForwardBackward {forwardBack}"));
+
+                tello.SendRCAxis(0, forwardBack, 0, speed);
+                _processingCommand = false;
+            }
+        }
+        
+        public struct Pid
+        {
+            /// <summary>
+            /// Proportional
+            /// </summary>
+            public double P = 0.4;
+            /// <summary>
+            /// Integral
+            /// </summary>
+            public double I = 0.4;
+            /// <summary>
+            /// Derivative
+            /// </summary>
+            public double D = 0;
         }
     }
 }

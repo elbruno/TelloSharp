@@ -43,6 +43,14 @@
             this.btnRight = new System.Windows.Forms.Button();
             this.btnForward = new System.Windows.Forms.Button();
             this.btnBackward = new System.Windows.Forms.Button();
+            this.btnUp = new System.Windows.Forms.Button();
+            this.btnCw = new System.Windows.Forms.Button();
+            this.btnCcw = new System.Windows.Forms.Button();
+            this.btnDown = new System.Windows.Forms.Button();
+            this.lblConState = new System.Windows.Forms.Label();
+            this.btnStartCam = new System.Windows.Forms.Button();
+            this.pictureBoxIpl1 = new OpenCvSharp.UserInterface.PictureBoxIpl();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIpl1)).BeginInit();
             this.SuspendLayout();
             // 
             // btnConnect
@@ -57,7 +65,7 @@
             // 
             // btnTakeOff
             // 
-            this.btnTakeOff.Location = new System.Drawing.Point(175, 17);
+            this.btnTakeOff.Location = new System.Drawing.Point(18, 55);
             this.btnTakeOff.Name = "btnTakeOff";
             this.btnTakeOff.Size = new System.Drawing.Size(111, 23);
             this.btnTakeOff.TabIndex = 1;
@@ -77,7 +85,7 @@
             // 
             // btnThrowTakeOff
             // 
-            this.btnThrowTakeOff.Location = new System.Drawing.Point(175, 46);
+            this.btnThrowTakeOff.Location = new System.Drawing.Point(18, 85);
             this.btnThrowTakeOff.Name = "btnThrowTakeOff";
             this.btnThrowTakeOff.Size = new System.Drawing.Size(111, 23);
             this.btnThrowTakeOff.TabIndex = 3;
@@ -107,7 +115,7 @@
             // 
             // btnBounce
             // 
-            this.btnBounce.Location = new System.Drawing.Point(175, 85);
+            this.btnBounce.Location = new System.Drawing.Point(18, 143);
             this.btnBounce.Name = "btnBounce";
             this.btnBounce.Size = new System.Drawing.Size(75, 23);
             this.btnBounce.TabIndex = 6;
@@ -117,7 +125,7 @@
             // 
             // btnFlip
             // 
-            this.btnFlip.Location = new System.Drawing.Point(175, 114);
+            this.btnFlip.Location = new System.Drawing.Point(18, 172);
             this.btnFlip.Name = "btnFlip";
             this.btnFlip.Size = new System.Drawing.Size(75, 23);
             this.btnFlip.TabIndex = 7;
@@ -127,7 +135,7 @@
             // 
             // btnStartSmartVideo
             // 
-            this.btnStartSmartVideo.Location = new System.Drawing.Point(175, 152);
+            this.btnStartSmartVideo.Location = new System.Drawing.Point(18, 339);
             this.btnStartSmartVideo.Name = "btnStartSmartVideo";
             this.btnStartSmartVideo.Size = new System.Drawing.Size(111, 23);
             this.btnStartSmartVideo.TabIndex = 8;
@@ -137,7 +145,7 @@
             // 
             // btnStopSmartVideo
             // 
-            this.btnStopSmartVideo.Location = new System.Drawing.Point(175, 181);
+            this.btnStopSmartVideo.Location = new System.Drawing.Point(18, 368);
             this.btnStopSmartVideo.Name = "btnStopSmartVideo";
             this.btnStopSmartVideo.Size = new System.Drawing.Size(111, 23);
             this.btnStopSmartVideo.TabIndex = 9;
@@ -147,9 +155,9 @@
             // 
             // btnHover
             // 
-            this.btnHover.Location = new System.Drawing.Point(175, 210);
+            this.btnHover.Location = new System.Drawing.Point(342, 143);
             this.btnHover.Name = "btnHover";
-            this.btnHover.Size = new System.Drawing.Size(75, 23);
+            this.btnHover.Size = new System.Drawing.Size(237, 23);
             this.btnHover.TabIndex = 10;
             this.btnHover.Text = "Hover";
             this.btnHover.UseVisualStyleBackColor = true;
@@ -157,7 +165,7 @@
             // 
             // btnLeft
             // 
-            this.btnLeft.Location = new System.Drawing.Point(342, 85);
+            this.btnLeft.Location = new System.Drawing.Point(469, 84);
             this.btnLeft.Name = "btnLeft";
             this.btnLeft.Size = new System.Drawing.Size(75, 23);
             this.btnLeft.TabIndex = 11;
@@ -167,7 +175,7 @@
             // 
             // btnRight
             // 
-            this.btnRight.Location = new System.Drawing.Point(423, 85);
+            this.btnRight.Location = new System.Drawing.Point(550, 84);
             this.btnRight.Name = "btnRight";
             this.btnRight.Size = new System.Drawing.Size(75, 23);
             this.btnRight.TabIndex = 12;
@@ -177,7 +185,7 @@
             // 
             // btnForward
             // 
-            this.btnForward.Location = new System.Drawing.Point(377, 56);
+            this.btnForward.Location = new System.Drawing.Point(504, 55);
             this.btnForward.Name = "btnForward";
             this.btnForward.Size = new System.Drawing.Size(75, 23);
             this.btnForward.TabIndex = 13;
@@ -187,7 +195,7 @@
             // 
             // btnBackward
             // 
-            this.btnBackward.Location = new System.Drawing.Point(377, 114);
+            this.btnBackward.Location = new System.Drawing.Point(504, 113);
             this.btnBackward.Name = "btnBackward";
             this.btnBackward.Size = new System.Drawing.Size(75, 23);
             this.btnBackward.TabIndex = 14;
@@ -195,11 +203,87 @@
             this.btnBackward.UseVisualStyleBackColor = true;
             this.btnBackward.Click += new System.EventHandler(this.btnBackward_Click);
             // 
+            // btnUp
+            // 
+            this.btnUp.Location = new System.Drawing.Point(342, 55);
+            this.btnUp.Name = "btnUp";
+            this.btnUp.Size = new System.Drawing.Size(75, 23);
+            this.btnUp.TabIndex = 15;
+            this.btnUp.Text = "Up";
+            this.btnUp.UseVisualStyleBackColor = true;
+            this.btnUp.Click += new System.EventHandler(this.btnUp_Click);
+            // 
+            // btnCw
+            // 
+            this.btnCw.Location = new System.Drawing.Point(285, 84);
+            this.btnCw.Name = "btnCw";
+            this.btnCw.Size = new System.Drawing.Size(81, 23);
+            this.btnCw.TabIndex = 16;
+            this.btnCw.Text = "Clockwise";
+            this.btnCw.UseVisualStyleBackColor = true;
+            this.btnCw.Click += new System.EventHandler(this.btnCw_Click);
+            // 
+            // btnCcw
+            // 
+            this.btnCcw.Location = new System.Drawing.Point(372, 84);
+            this.btnCcw.Name = "btnCcw";
+            this.btnCcw.Size = new System.Drawing.Size(91, 23);
+            this.btnCcw.TabIndex = 17;
+            this.btnCcw.Text = "C-Clockwise";
+            this.btnCcw.UseVisualStyleBackColor = true;
+            this.btnCcw.Click += new System.EventHandler(this.btnCcw_Click);
+            // 
+            // btnDown
+            // 
+            this.btnDown.Location = new System.Drawing.Point(342, 114);
+            this.btnDown.Name = "btnDown";
+            this.btnDown.Size = new System.Drawing.Size(75, 23);
+            this.btnDown.TabIndex = 18;
+            this.btnDown.Text = "Down";
+            this.btnDown.UseVisualStyleBackColor = true;
+            this.btnDown.Click += new System.EventHandler(this.btnDown_Click);
+            // 
+            // lblConState
+            // 
+            this.lblConState.AutoSize = true;
+            this.lblConState.Location = new System.Drawing.Point(100, 20);
+            this.lblConState.Name = "lblConState";
+            this.lblConState.Size = new System.Drawing.Size(79, 15);
+            this.lblConState.TabIndex = 19;
+            this.lblConState.Text = "Disconnected";
+            // 
+            // btnStartCam
+            // 
+            this.btnStartCam.Location = new System.Drawing.Point(597, 354);
+            this.btnStartCam.Name = "btnStartCam";
+            this.btnStartCam.Size = new System.Drawing.Size(75, 23);
+            this.btnStartCam.TabIndex = 20;
+            this.btnStartCam.Text = "Start Cam";
+            this.btnStartCam.UseVisualStyleBackColor = true;
+            this.btnStartCam.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // pictureBoxIpl1
+            // 
+            this.pictureBoxIpl1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
+            this.pictureBoxIpl1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pictureBoxIpl1.Location = new System.Drawing.Point(678, 17);
+            this.pictureBoxIpl1.Name = "pictureBoxIpl1";
+            this.pictureBoxIpl1.Size = new System.Drawing.Size(480, 360);
+            this.pictureBoxIpl1.TabIndex = 21;
+            this.pictureBoxIpl1.TabStop = false;
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(1174, 402);
+            this.Controls.Add(this.pictureBoxIpl1);
+            this.Controls.Add(this.btnStartCam);
+            this.Controls.Add(this.lblConState);
+            this.Controls.Add(this.btnDown);
+            this.Controls.Add(this.btnCcw);
+            this.Controls.Add(this.btnCw);
+            this.Controls.Add(this.btnUp);
             this.Controls.Add(this.btnBackward);
             this.Controls.Add(this.btnForward);
             this.Controls.Add(this.btnRight);
@@ -218,7 +302,9 @@
             this.Name = "frmMain";
             this.Text = "TelloSharp";
             this.Load += new System.EventHandler(this.frmMain_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIpl1)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -239,5 +325,12 @@
         private Button btnRight;
         private Button btnForward;
         private Button btnBackward;
+        private Button btnUp;
+        private Button btnCw;
+        private Button btnCcw;
+        private Button btnDown;
+        private Label lblConState;
+        private Button btnStartCam;
+        private OpenCvSharp.UserInterface.PictureBoxIpl pictureBoxIpl1;
     }
 }

@@ -3,30 +3,24 @@ using static TelloSharp.Messages;
 
 namespace TelloSharp
 {
-    public partial class Tello
+    public class Tello
     {
         private UdpUser _client;
         private FlyData _state;
-        private Messages _messages;
         private FileInternal fileTemp;
         private DateTime lastMessageTime;//for connection timeouts.
-        private readonly UdpListener videoServer = new UdpListener(6040);
-
-
-        private byte _wifiStrength = 0;
-        private short _controlSequence = 1;
-        public bool _connected = false;
+        
+        internal byte _wifiStrength = 0;
+        internal short _controlSequence = 1;
+        internal bool _connected = false;
 
         public event EventHandler<TelloStateEventArgs> OnUpdate;
         public event EventHandler<ConnectionState> OnConnection;
 
-        public string picPath;      //todo redo this. 
-        public string picFilePath;  //todo redo this. 
-        public int picMode = 0;     //pic or vid aspect ratio.
-
-        public int iFrameRate = 5;  //How often to ask for iFrames in 50ms. Ie 2=10x 5=4x 10=2xSecond 5 = 4xSecond
-
-        private ushort sequence = 1;
+        internal string picPath;      //todo redo this. 
+        internal string picFilePath;  //todo redo this. 
+        internal int picMode = 0;     //pic or vid aspect ratio.
+              
 
         public enum ConnectionState
         {
@@ -46,7 +40,6 @@ namespace TelloSharp
         public Tello()
         {
             _state = new FlyData(this);
-            _messages = new Messages();
             _client = new UdpUser();
         }
 
@@ -71,6 +64,11 @@ namespace TelloSharp
             ctrlLx = 0;
             ctrlLy = 0;
             SendStickUpdate();
+        }
+
+        public void SendCommand(string cmd)
+        {            
+            _client.Send(Encoding.UTF8.GetBytes(cmd));
         }
 
         /// <summary>
@@ -133,10 +131,7 @@ namespace TelloSharp
             var buffer = PacketToBuffer(pkt);
             _client.Send(buffer);
         }
-
- 
-
-
+        
         private int Int16ToTello(short sv)
         {
             // sv is in range -32768 to 32767, we need 660 to 1388 where 0 => 1024
@@ -155,14 +150,16 @@ namespace TelloSharp
 
         private void SendDateTime()
         {
-            var pkt = new Packet();
+            var pkt = new Packet
+            {
 
-            // populate the command packet fields we need
-            pkt.header = msgHdr;
-            pkt.toDrone = true;
-            pkt.packetType = PacketType.ptData1;
-            pkt.messageID = MessageTypes.msgSetDateTime;
-            pkt.payload = new byte[11];
+                // populate the command packet fields we need
+                header = msgHdr,
+                toDrone = true,
+                packetType = PacketType.ptData1,
+                messageID = MessageTypes.msgSetDateTime,
+                payload = new byte[11]
+            };
 
             _controlSequence++;
             pkt.sequence = _controlSequence;
@@ -276,6 +273,29 @@ namespace TelloSharp
                 speed = (short)(pct * 327); // /100 * 32767
             }
             UpdateSticks(new StickMessage() { Rx = 0, Ry = 0, Lx = (short)-speed, Ly = 0 });
+        }
+
+
+        public void SendRCAxis(short rx, short ry, short lx, short ly)
+        {
+            if (rx > 0)
+            {
+                rx = (short)(rx * 327); // /100 * 32767
+            }
+            if (ry > 0)
+            {
+                ry = (short)(ry * 327); // /100 * 32767
+            }
+            if (lx > 0)
+            {
+                lx = (short)(lx * 327); // /100 * 32767
+            }
+            if (ly > 0)
+            {
+                ly = (short)(ly * 327); // /100 * 32767
+            }
+
+            UpdateSticks(new StickMessage() { Rx = rx, Ry = ry, Lx = lx, Ly = ly });
         }
 
         public void SetSportsMode(bool sports)
@@ -810,9 +830,7 @@ namespace TelloSharp
                 }
             }, token);
         }
-
-       
-
+        
         private void SendFileDone(short fID, object accumSize)
         {
             var pkt = NewPacket(PacketType.ptGet, MessageTypes.msgFileDone, _controlSequence++, 6);
@@ -836,23 +854,6 @@ namespace TelloSharp
             pkt.payload[5] = (byte)((byte)pieceNum >> 16);
             pkt.payload[6] = (byte)((byte)pieceNum >> 24);
             _client.Send(PacketToBuffer(pkt));
-        }
-
-        private short QuatToYawDeg(float qX, float qY, float qZ, float qW)
-        {
-            const float degree = (float)(Math.PI / 180.0);
-            var qqX = (int)qX;
-            var qqY = (int)qY;
-            var qqZ = (int)qZ;
-            var qqW = (int)qW;
-            var sqY = qqY * qqY;
-            var sqZ = qqZ * qqZ;
-
-            var sinY = 2.0 * (qqW * qqZ + qqX * qqY);
-            var cosY = 1.0 - 2 * (sqY + sqZ);
-
-            var yaw = (short)Math.Round(Math.Atan2(sinY, cosY) / degree);
-            return yaw;
         }
 
         public delegate float[] GetControllerDeligate();
