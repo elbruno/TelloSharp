@@ -8,7 +8,6 @@ namespace TelloSharp.WinformsExample
         private CameraModule cameraModule = new();
         private int _pError;
         private bool _processingCommand = false;
-        private bool _connected = false;
 
         public frmMain()
         {
@@ -32,12 +31,12 @@ namespace TelloSharp.WinformsExample
 
         private void Tello_OnUpdate(object? sender, TelloStateEventArgs e)
         {
-
+            Invoke(new Action(() => lblBattery.Text = $"Battery: {e.State.BatteryPercentage}"));            
         }
 
         private void Tello_OnConnection(object? sender, Tello.ConnectionState e)
         {
-            lblConState.Text = e.ToString();
+            lblConState.Invoke(new Action(()=> lblConState.Text = e.ToString()));
         }
 
         private void btnTakeOff_Click(object sender, EventArgs e)
@@ -144,7 +143,7 @@ namespace TelloSharp.WinformsExample
 
         private void CameraModule_NewCoordInfo(object? sender, CoordinatesEventArgs e)
         {
-            if (_connected && !_processingCommand)
+            if (!_processingCommand)
             {
                 _processingCommand = true;
 

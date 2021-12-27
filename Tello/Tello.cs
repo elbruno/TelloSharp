@@ -703,6 +703,7 @@ namespace TelloSharp
                             }
                         }
 
+                        if (received.bytes.Length < 10) return;
                         var pkt = BufferToPacket(received.bytes);
                         int cmdId = received.bytes[5] | (received.bytes[6] << 8);
 

@@ -196,6 +196,7 @@
         // bufferToPacket takes a raw buffer of bytes and populates our packet struct
         public static Packet BufferToPacket(byte[] buff)
         {
+            if (buff.Length < 10) return new Packet();
             Packet pkt = new()
             {
                 header = buff[0],

@@ -50,6 +50,7 @@
             this.lblConState = new System.Windows.Forms.Label();
             this.btnStartCam = new System.Windows.Forms.Button();
             this.pictureBoxIpl1 = new OpenCvSharp.UserInterface.PictureBoxIpl();
+            this.lblBattery = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIpl1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -272,11 +273,21 @@
             this.pictureBoxIpl1.TabIndex = 21;
             this.pictureBoxIpl1.TabStop = false;
             // 
+            // lblBattery
+            // 
+            this.lblBattery.AutoSize = true;
+            this.lblBattery.Location = new System.Drawing.Point(185, 20);
+            this.lblBattery.Name = "lblBattery";
+            this.lblBattery.Size = new System.Drawing.Size(47, 15);
+            this.lblBattery.TabIndex = 22;
+            this.lblBattery.Text = "Battery:";
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1174, 402);
+            this.Controls.Add(this.lblBattery);
             this.Controls.Add(this.pictureBoxIpl1);
             this.Controls.Add(this.btnStartCam);
             this.Controls.Add(this.lblConState);
@@ -332,5 +343,6 @@
         private Label lblConState;
         private Button btnStartCam;
         private OpenCvSharp.UserInterface.PictureBoxIpl pictureBoxIpl1;
+        private Label lblBattery;
     }
 }

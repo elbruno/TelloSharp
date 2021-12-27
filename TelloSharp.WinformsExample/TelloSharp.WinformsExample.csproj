@@ -10,7 +10,50 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FFmpeg.AutoGen" Version="4.4.1.1" />
+    <None Remove="VideoDecoding\dll\avcodec-58.dll" />
+    <None Remove="VideoDecoding\dll\avdevice-58.dll" />
+    <None Remove="VideoDecoding\dll\avfilter-7.dll" />
+    <None Remove="VideoDecoding\dll\avformat-58.dll" />
+    <None Remove="VideoDecoding\dll\avutil-56.dll" />
+    <None Remove="VideoDecoding\dll\ffmpeg.exe" />
+    <None Remove="VideoDecoding\dll\ffplay.exe" />
+    <None Remove="VideoDecoding\dll\ffprobe.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="VideoDecoding\dll\avcodec-58.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\avdevice-58.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\avfilter-7.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\avformat-58.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\avutil-56.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\ffmpeg.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\ffplay.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="VideoDecoding\dll\ffprobe.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="haarcascade_frontalface_default.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="VL.OpenCV" Version="2.1.0" />
   </ItemGroup>
 
@@ -19,37 +62,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="VideoDecoding\dll\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="VideoDecoding\dll\avcodec-58.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\avdevice-58.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\avfilter-7.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\avformat-58.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\avutil-56.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\DirectShowLib.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\ffmpeg.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\ffplay.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="VideoDecoding\dll\ffprobe.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Reference Include="FFmpeg.AutoGen">
+      <HintPath>VideoDecoding\dll\FFmpeg.AutoGen.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

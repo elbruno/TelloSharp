@@ -49,10 +49,13 @@ namespace TelloSharp.WinformsExample
         {
             while (true)
             {
-                Mat detected = Capture();
-                if (detected.Data == IntPtr.Zero) continue;
+                Mat capture = Capture();
+                if (capture.Data == IntPtr.Zero) continue;
+
+                Cv2.Resize(capture, capture, new Size(480, 360));
+
                 Mat grayImage = new();
-                Cv2.CvtColor(detected, grayImage, ColorConversionCodes.BGR2GRAY);
+                Cv2.CvtColor(capture, grayImage, ColorConversionCodes.BGR2GRAY);
                 Rect[] rectangles = faceClassifier.DetectMultiScale(grayImage, 1.2, 8, HaarDetectionTypes.ScaleImage, null, null);
 
                 if (rectangles.Length == 0)
@@ -66,13 +69,13 @@ namespace TelloSharp.WinformsExample
                     var cy = rect.Y + rect.Height / 2;
                     var area = rect.Width * rect.Height;
 
-                    Cv2.Circle(detected, cx, cy, 10, Scalar.LimeGreen, 5, LineTypes.Link8, 0);
-                    Cv2.Rectangle(detected, new Point(rect.BottomRight.X, rect.BottomRight.Y), new Point(rect.TopLeft.X, rect.TopLeft.Y), 55, 2);
+                    Cv2.Circle(capture, cx, cy, 10, Scalar.LimeGreen, 5, LineTypes.Link8, 0);
+                    Cv2.Rectangle(capture, new Point(rect.BottomRight.X, rect.BottomRight.Y), new Point(rect.TopLeft.X, rect.TopLeft.Y), 55, 2);
 
                     NewCoordInfo?.Invoke(this, new CoordinatesEventArgs(new System.Drawing.Point(cx, cy), area, "person"));
 
                 }
-                var bmp = BitmapConverter.ToBitmap(detected);
+                var bmp = BitmapConverter.ToBitmap(capture);
 
                 lock (pictureBox)
                 {
