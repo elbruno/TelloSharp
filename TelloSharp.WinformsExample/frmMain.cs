@@ -205,6 +205,10 @@ namespace TelloSharp.WinformsExample
             /// Derivative
             /// </summary>
             public double D = 0;
+
+            public Pid()
+            {
+            }
         }
     }
 }
