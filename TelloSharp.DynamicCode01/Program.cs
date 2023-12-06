@@ -1,6 +1,6 @@
 ﻿using TelloSharp;
 
-namespace TelloSharp.Example
+namespace TelloSharp.DynamicCode01
 {
     public static class Program
     {
@@ -22,23 +22,29 @@ namespace TelloSharp.Example
             tello.OnConnection += Tello_OnConnection;
             tello.OnUpdate += Tello_OnUpdate;
             tello.Connect();
-            
-            while (!tello.CancelTokens.Token.IsCancellationRequested)
-            {
-                var line = Console.ReadLine();
-                if (line != null)
-                {                    
-                    if (line.Contains("exit")) break;
-                    if(line.Contains("cls")) Console.Clear();
-                    if (line.Contains("takeoff")) tello.TakeOff();
-                    if (line.Contains("land")) tello.Land();
-                    if (line.Contains("flip f")) tello.Flip(Messages.FlipType.FlipForward);
-                    if (line.Contains("flip b")) tello.Flip(Messages.FlipType.FlipBackward);
-                    if (line.Contains("flip l")) tello.Flip(Messages.FlipType.FlipBackwardLeft);
-                    if (line.Contains("flip r")) tello.Flip(Messages.FlipType.FlipBackwardRight);
 
-                }
-            }
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            var d = new DynamicTelloActions();
+            d.run(tello);
+
+            //while (!tello.CancelTokens.Token.IsCancellationRequested)
+            //{
+            //    var line = Console.ReadLine();
+            //    if (line != null)
+            //    {
+            //        if (line.Contains("exit")) break;
+            //        if (line.Contains("cls")) Console.Clear();
+            //        if (line.Contains("takeoff")) tello.TakeOff();
+            //        if (line.Contains("land")) tello.Land();
+            //        if (line.Contains("flip f")) tello.Flip(Messages.FlipType.FlipForward);
+            //        if (line.Contains("flip b")) tello.Flip(Messages.FlipType.FlipBackward);
+            //        if (line.Contains("flip l")) tello.Flip(Messages.FlipType.FlipBackwardLeft);
+            //        if (line.Contains("flip r")) tello.Flip(Messages.FlipType.FlipBackwardRight);
+
+            //    }
+            //}
         }
 
         private static void Tello_OnConnection(object? sender, Tello.ConnectionState e)
@@ -66,7 +72,7 @@ namespace TelloSharp.Example
                 //PrintAt(0, 2, outStr);
             }
         }
- 
+
 
         static void PrintAt(int x, int y, string? str)
         {
@@ -83,5 +89,32 @@ namespace TelloSharp.Example
             Console.SetCursorPosition(0, 23);
             Console.WriteLine("Commands:takeoff,land,exit,cls");
         }
-    }        
+    }
+
+    class DynamicTelloActions()
+    {
+        public void run(Tello telloDrone)
+        {
+            // take off the drone
+            telloDrone.TakeOff();
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // flip forward the drone
+            telloDrone.Flip(Messages.FlipType.FlipForward);
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // flip backward the drone
+            telloDrone.Flip(Messages.FlipType.FlipBackward);
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // land the drone
+            telloDrone.Land();
+        }
+    }
 }

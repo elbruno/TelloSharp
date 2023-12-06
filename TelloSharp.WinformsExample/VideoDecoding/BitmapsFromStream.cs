@@ -87,17 +87,17 @@ namespace TelloSharp.WinformsExample
 
         private static unsafe void SetupLogging()
         {
-            ffmpeg.av_log_set_level(ffmpeg.AV_LOG_VERBOSE);
-            av_log_set_callback_callback logCallback = (p0, level, format, vl) =>
-            {
-                if (level > ffmpeg.av_log_get_level()) return;
-                var lineSize = 1024;
-                var lineBuffer = stackalloc byte[lineSize];
-                var printPrefix = 1;
-                ffmpeg.av_log_format_line(p0, level, format, vl, lineBuffer, lineSize, &printPrefix);
-                var line = Marshal.PtrToStringAnsi((IntPtr)lineBuffer);
-            };
-            ffmpeg.av_log_set_callback(logCallback);
+            //ffmpeg.av_log_set_level(ffmpeg.AV_LOG_VERBOSE);
+            //av_log_set_callback_callback logCallback = (p0, level, format, vl) =>
+            //{
+            //    if (level > ffmpeg.av_log_get_level()) return;
+            //    var lineSize = 1024;
+            //    var lineBuffer = stackalloc byte[lineSize];
+            //    var printPrefix = 1;
+            //    ffmpeg.av_log_format_line(p0, level, format, vl, lineBuffer, lineSize, &printPrefix);
+            //    var line = Marshal.PtrToStringAnsi((IntPtr)lineBuffer);
+            //};
+            //ffmpeg.av_log_set_callback(logCallback);
         }
 
         private static void ConfigureHWDecoder(out AVHWDeviceType HWtype)
