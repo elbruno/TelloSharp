@@ -16,7 +16,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp.WinformsExample"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp.Test", "TelloSharp.Test\TelloSharp.Test.csproj", "{E8BDA127-19EE-468F-AD54-16C3FF926F89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.DynamicCode01", "TelloSharp.DynamicCode01\TelloSharp.DynamicCode01.csproj", "{4D0F1320-3B60-439E-876C-9EE349914600}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelloSharp.DynamicCode01", "TelloSharp.DynamicCode01\TelloSharp.DynamicCode01.csproj", "{4D0F1320-3B60-439E-876C-9EE349914600}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelloSharp.DynamicCode02", "TelloSharp.DynamicCode02\TelloSharp.DynamicCode02.csproj", "{67F47E19-8D1B-4EC0-9138-2907C844F78C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +46,10 @@ Global
 		{4D0F1320-3B60-439E-876C-9EE349914600}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4D0F1320-3B60-439E-876C-9EE349914600}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4D0F1320-3B60-439E-876C-9EE349914600}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67F47E19-8D1B-4EC0-9138-2907C844F78C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67F47E19-8D1B-4EC0-9138-2907C844F78C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67F47E19-8D1B-4EC0-9138-2907C844F78C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67F47E19-8D1B-4EC0-9138-2907C844F78C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

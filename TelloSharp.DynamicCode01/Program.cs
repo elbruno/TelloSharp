@@ -45,6 +45,8 @@ namespace TelloSharp.DynamicCode01
 
             //    }
             //}
+
+
         }
 
         private static void Tello_OnConnection(object? sender, Tello.ConnectionState e)
@@ -92,6 +94,33 @@ namespace TelloSharp.DynamicCode01
     }
 
     class DynamicTelloActions()
+    {
+        public void run(dynamic telloDrone)
+        {
+            // take off the drone
+            telloDrone.TakeOff();
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // flip forward the drone
+            telloDrone.Flip(Messages.FlipType.FlipForward);
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // flip backward the drone
+            telloDrone.Flip(Messages.FlipType.FlipBackward);
+
+            // sleep of 2 seconds
+            Thread.Sleep(2000);
+
+            // land the drone
+            telloDrone.Land();
+        }
+    }
+
+    class StaticTelloActions()
     {
         public void run(Tello telloDrone)
         {
