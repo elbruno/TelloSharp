@@ -1,12 +1,4 @@
-﻿using Microsoft.CSharp;
-using System.CodeDom.Compiler;
-using System.Runtime.Loader;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Emit;
-using System.Reflection;
-using static System.Net.Mime.MediaTypeNames;
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 
